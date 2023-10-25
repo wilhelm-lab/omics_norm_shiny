@@ -1,0 +1,27 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+
+.RDataTmp
+M-Combat.R
+Mathias_processed/
+Paula_norm_15.pdf
+custom.js
+experimentalDesign.txt
+experimentalDesignProcessed.txt
+experimentalDesignProcessedNoPosRefs.txt
+older versions app/
+preprocess-other-way-directlyUsingInputs.PNG
+proteingroups.csv
+res-smallerMargins.pdf
+res-smallerMargins2.pdf
+res.pdf
+res01.svg
+res02.svg
+res03.svg
+res04.svg
+result_rowwisenormBig.pdf
+result_rowwisenorm_totalsum.pdf
+rowwisenorm_shiny.Rproj
+sum-normalize-outcommented-panels.txt
