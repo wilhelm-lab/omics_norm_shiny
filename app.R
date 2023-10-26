@@ -220,8 +220,31 @@ ui <- fluidPage(
                         ),
                         hr(),  # horizontal line
 
-                        # write outfile
-                        checkboxInput(inputId = "writeoutfile", label = "Download normalized data", value = FALSE),
+
+                        # color for checkboxes for manual setting
+                        tags$head(
+                          tags$style(HTML('
+                            /* CSS to change the label color for specific checkboxes */
+                            .shiny-input-container #writeoutfile + .form-check-label::before {
+                              background-color: blue !important;
+                            }
+                            .shiny-input-container #save_plots_raw + .form-check-label::before {
+                              background-color: red !important;
+                            }
+                            .shiny-input-container #save_plots_norm + .form-check-label::before {
+                              background-color: green !important;
+                            }
+                          '))
+                        ),
+
+                        # download button for outfile lowest-level
+                        downloadButton("download_outfile", "Download Data on Lowest Level"),
+
+                        # download button for outfile with additional columns
+                        downloadButton("download_outfile_comp", "Download Data Complete"),
+
+                        # download outfile - manually - could replace div(icon())) with just setting the label
+                        checkboxInput(inputId = "writeoutfile", div(icon("star"), "Manually: Download normalized data"), value = FALSE),
                         textOutput("writeout"),
 
                         conditionalPanel(
@@ -234,12 +257,6 @@ ui <- fluidPage(
                           verbatimTextOutput("outfile_path")
                         ),
 
-                        # download button for outfile lowest-level
-                        downloadButton("download_outfile", "Download Data on Lowest Level"),
-
-                        # download button for outfile with additional columns
-                        downloadButton("download_outfile_comp", "Download Data Complete"),
-
                         div(
                           h3("Download Plots", style = "font-size: 20px; font-weight:750;"),
                           class = "title-div"
@@ -249,8 +266,18 @@ ui <- fluidPage(
                         # show labels parameter for PCA labels
                         checkboxInput(inputId = "show_labels", label = "Show labels inside PCA plot", value = FALSE),
 
-                        # PDF for plots raw
-                        checkboxInput(inputId = "save_plots_raw", label = "Save plots for raw data as PDF", value = FALSE),
+                        # svg parameter
+                        checkboxInput(inputId = "svg", label = "Additionally create SVG files", value = FALSE),
+
+
+                        # download button for PDF (and svg) raw
+                        downloadButton("download_pdf_raw", "Download Plots Raw Data"),
+
+                        # download button for PDF (and svg) normalized
+                        downloadButton("download_pdf_norm", "Download Plots Normalized Data"),
+
+                        # download plots raw - manually
+                        checkboxInput(inputId = "save_plots_raw", div(icon("star"), "Manually: Save plots for raw data"), value = FALSE),
                         textOutput("saving_plots_raw"),
 
                         conditionalPanel(
@@ -261,8 +288,8 @@ ui <- fluidPage(
                           verbatimTextOutput("pdf_path_raw")
                         ),
 
-                        # PDF for plots row-wise
-                        checkboxInput(inputId = "save_plots_norm", label = "Save plots for normalized data as PDF", value = FALSE),
+                        # download plots normalized - manually
+                        checkboxInput(inputId = "save_plots_norm", div(icon("star"), "Manually: Save plots for normalized data"), value = FALSE),
                         textOutput("saving_plots_norm"),
 
                         conditionalPanel(
@@ -273,11 +300,6 @@ ui <- fluidPage(
                           verbatimTextOutput("pdf_path_norm")
                         ),
 
-                        # download button for PDF raw
-                        downloadButton("download_pdf_raw", "Download Plots Raw Data"),
-
-                        # download button for PDF normalized
-                        downloadButton("download_pdf_norm", "Download Plots Normalized Data"),
                         )
                ),
 
@@ -602,12 +624,17 @@ server <- function(input, output, session) {
 
         # show labels parameter
         if (input$show_labels) show_lab <- T else show_lab <- F
+
+        # svg parameter
+        if (input$svg) make_svg <- T else make_svg <- F
+
         rowwisenorm::plot_results(lowest_level_df = lowest_level_df, exp_design = exp_design,
-                                  main = input$filename_raw, output_dir = input$dir_raw, show_labels = show_lab)
+                                  main = input$filename_raw, output_dir = input$dir_raw,
+                                  show_labels = show_lab, svg = make_svg)
 
         # output message stating where the file was saved
         if (input$dir_raw != "")  dir_path <- input$dir_raw else dir_path <- "current working directory"
-        if (input$filename_raw != "") file_name <- paste(input$filename_raw, ".pdf", sep = "") else file_name <- "result_rowwisenorm.pdf"  # note: hard coded as stated in plot_results
+        if (input$filename_raw != "") file_name <- paste(input$filename_raw, ".pdf", sep = "") else file_name <- "results.pdf"  # note: hard coded as stated in plot_results
         output$pdf_path_raw <- renderText({
           paste("PDF saved to ", dir_path, " with file name ", file_name)
         })
@@ -638,12 +665,17 @@ server <- function(input, output, session) {
 
         # show labels parameter
         if (input$show_labels) show_lab <- T else show_lab <- F
+
+        # svg parameter
+        if (input$svg) make_svg <- T else make_svg <- F
+
         rowwisenorm::plot_results(lowest_level_df = lowest_level_norm, exp_design = exp_design,
-                                  main = input$filename_norm, output_dir = input$dir_norm, show_labels = show_lab)
+                                  main = input$filename_norm, output_dir = input$dir_norm,
+                                  show_labels = show_lab, svg = make_svg)
 
         # output message stating where the file was saved
         if (input$dir_norm != "")  dir_path <- input$dir_norm else dir_path <- "current working directory"
-        if (input$filename_norm != "") file_name <- paste(input$filename_norm, ".pdf", sep = "") else file_name <- "result_rowwisenorm.pdf"  # note: hard coded as stated in plot_results
+        if (input$filename_norm != "") file_name <- paste(input$filename_norm, ".pdf", sep = "") else file_name <- "results.pdf"  # note: hard coded as stated in plot_results
         output$pdf_path_norm <- renderText({
           paste("PDF saved to ", dir_path, " with file name ", file_name)
         })
@@ -665,13 +697,16 @@ server <- function(input, output, session) {
           # show labels parameter
           if (input$show_labels) show_lab <- T else show_lab <- F
 
+          # svg parameter
+          if (input$svg) make_svg <- T else make_svg <- F
+
           # Save file with a progress indicator
           withProgress(
             message = 'Generating PDF...',
             detail = 'This may take a moment...',
             value = 0, {
               # Generate the PDF
-              rowwisenorm::plot_results(lowest_level_df, exp_design, show_labels = show_lab)
+              rowwisenorm::plot_results(lowest_level_df, exp_design, show_labels = show_lab, svg = make_svg)
               Sys.sleep(0.5)  # Simulate some work for the progress bar
 
               # Move the generated file to the specified location
@@ -710,13 +745,16 @@ server <- function(input, output, session) {
           # show labels parameter
           if (input$show_labels) show_lab <- T else show_lab <- F
 
+          # svg parameter
+          if (input$svg) make_svg <- T else make_svg <- F
+
           # Save file with a progress indicator
           withProgress(
             message = 'Generating PDF...',
             detail = 'This may take a moment...',
             value = 0, {
               # Generate the PDF
-              rowwisenorm::plot_results(lowest_level_norm, exp_design, show_labels = show_lab)
+              rowwisenorm::plot_results(lowest_level_norm, exp_design, show_labels = show_lab, svg = make_svg)
               Sys.sleep(0.5)  # Simulate some work for the progress bar
 
               # Move the generated file to the specified location
@@ -726,7 +764,6 @@ server <- function(input, output, session) {
         }
       }
     )
-
 
     # show plots
     observeEvent(input$show_plots_raw, {
@@ -801,7 +838,7 @@ server <- function(input, output, session) {
     })
 
 
-    # save outfile
+    # save outfile manually
     observeEvent(input$save_outfile, {
       return_list <- readin()
       if (! is.null(return_list)){
@@ -826,7 +863,7 @@ server <- function(input, output, session) {
                                      filename = input$filename_outfile, output_dir = input$dir_outfile)
           # output message
           if (input$dir_outfile != "")  dir_path <- input$dir_outfile else dir_path <- "current working directory"
-          if (input$filename_outfile != "") file_name <- paste(input$filename_outfile, ".csv", sep = "") else file_name <- "output_rowwisenorm.csv"  # note: hard coded as stated in write_outfile
+          if (input$filename_outfile != "") file_name <- paste(input$filename_outfile, ".csv", sep = "") else file_name <- "output.csv"  # note: hard coded as stated in write_outfile
         }
         else if(input$outfile_level == "all-columns"){
           return_list <- readin()
@@ -837,7 +874,7 @@ server <- function(input, output, session) {
                                      filename = input$filename_outfile, output_dir = input$dir_outfile)
           # output message
           if (input$dir_outfile != "")  dir_path <- input$dir_outfile else dir_path <- "current working directory"
-          if (input$filename_outfile != "") file_name <- paste(input$filename_outfile, ".csv", sep = "") else file_name <- "output_rowwisenorm_complete.csv"  # note: hard coded as stated in write_outfile
+          if (input$filename_outfile != "") file_name <- paste(input$filename_outfile, ".csv", sep = "") else file_name <- "output_complete.csv"  # note: hard coded as stated in write_outfile
         }
         output$outfile_path <- renderText({
           paste("Output saved to ", dir_path, " with file name ", file_name)
