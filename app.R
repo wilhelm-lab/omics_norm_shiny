@@ -220,23 +220,6 @@ ui <- fluidPage(
                         ),
                         hr(),  # horizontal line
 
-
-                        # color for checkboxes for manual setting
-                        tags$head(
-                          tags$style(HTML('
-                            /* CSS to change the label color for specific checkboxes */
-                            .shiny-input-container #writeoutfile + .form-check-label::before {
-                              background-color: blue !important;
-                            }
-                            .shiny-input-container #save_plots_raw + .form-check-label::before {
-                              background-color: red !important;
-                            }
-                            .shiny-input-container #save_plots_norm + .form-check-label::before {
-                              background-color: green !important;
-                            }
-                          '))
-                        ),
-
                         # download button for outfile lowest-level
                         downloadButton("download_outfile", "Download Data on Lowest Level"),
 
