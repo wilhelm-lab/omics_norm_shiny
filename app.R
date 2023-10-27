@@ -21,6 +21,13 @@ library(preprocessCore)  # for Quantile normalization
 # setting upload size to 100 MB max
 options(shiny.maxRequestSize=100*1024^2)
 
+# initialize global variables
+lowest_level_df <- data.frame()
+exp_design <- data.frame()
+additional_cols <- data.frame()
+lowest_level_norm <- data.frame()
+
+
 # Define UI for application that draws a histogram
 ui <- fluidPage(
 
@@ -75,6 +82,10 @@ ui <- fluidPage(
                         fileInput(inputId = "exp_design", label = "Upload the experimental design for your data",
                                   accept = c(".csv, .tsv, .txt", "text/*")),
                         textOutput("file_name_exp_design"),
+
+                        # process button
+                        actionButton("process", label = "Process", icon = icon("refresh")),
+
                        ),
                  # middle
                  column(4,
@@ -426,67 +437,102 @@ server <- function(input, output, session) {
       return(lowest_level_df)
     }
 
+    # BUTTON PROCESS: when clicked, new read in, new preprocess, new check method and do normalization
+    # save lowest level df, the other return list elements and the lowest level norm all in variables
+    # defined outside of reactives/ ... -> set them new every time when clicked, use them everywhere else
+    # clean everything when button clicked
+
+    # important: assign values for global variables with <<- and not <-
+    observeEvent(input$process, {
+      # set empty
+      lowest_level_df <<- data.frame()
+      exp_design <<- data.frame()
+      additional_cols <<- data.frame()
+      lowest_level_norm <<- data.frame()
+
+      # TODO set other fields empty
+      output$data_output <- renderPrint({ NULL })  # show data field
+
+      return_list <- readin()
+      if (! is.null(return_list)){
+        lowest_level_df <<- return_list[["lowest_level_df"]]
+        exp_design <<- return_list[["exp_design"]]
+        additional_cols <<- return_list[["additional_cols"]]
+
+        print(head(lowest_level_df))
+        print("button clicked")
+        print(head(lowest_level_norm))
+        print("button clicked before norm")
+        # pre-processing (included in each normalization) and normalization
+        if(input$method == "row-wise-normalization"){
+          lowest_level_norm <<- normalize_rowwise(lowest_level_df, exp_design)
+        }
+        else if(input$method == "total-sum"){
+          lowest_level_norm <<- normalize_totalsum(lowest_level_df)
+        }
+        else if(input$method == "VST"){
+          lowest_level_norm <<- normalize_vst()
+        }
+        else if(input$method == "VSN"){
+          lowest_level_norm <<- normalize_vsn()
+        }
+        else if(input$method == "quantile-normalization"){
+          lowest_level_norm <<- normalize_quantile()
+        }
+
+        print(head(lowest_level_norm))
+        print("button clicked norm")
+      }
+    })
+
 
     # NORMALIZATION row-wise
-    normalize_rowwise <- reactive({
+    normalize_rowwise <- function(lowest_level_df, exp_design){
       # clear for every new call
       output$normalize_row_warning <- renderText({ NULL })
-      lowest_level_norm <- data.frame()
 
-      return_list <- readin()
-      if (! is.null(return_list)){
-        lowest_level_df <- return_list[["lowest_level_df"]]
-        exp_design <- return_list[["exp_design"]]
+      # preprocessing
+      lowest_level_df_pre <- preprocess(lowest_level_df, do_log = input$log2_t, do_filter = input$filterrows,
+                                    do_sum = input$sum_norm, do_median = input$median_norm)
 
-        # preprocessing
-        lowest_level_df <- preprocess(lowest_level_df, do_log = input$log2_t, do_filter = input$filterrows,
-                                      do_sum = input$sum_norm, do_median = input$median_norm)
-
-        tryCatch({
-          if(input$active_mode){  # when active was set, the input for refs is taken as ref parameter
-            input_string <- input$refs
-            input_vector <- NULL
-            if (!is.null(input_string) && input_string != "") {
-              input_vector <- unlist(strsplit(input_string, ",\\s*"))
-              input_vector <- trimws(input_vector)
-            }
-            lowest_level_norm <- rowwisenorm::normalize_row(lowest_level_df = lowest_level_df,
-                                                            exp_design = exp_design, ref = input_vector,
-                                                            na.rm = input$na_rm, refFunc = input$refFunc)
+      tryCatch({
+        if(input$active_mode){  # when active was set, the input for refs is taken as ref parameter
+          input_string <- input$refs
+          input_vector <- NULL
+          if (!is.null(input_string) && input_string != "") {
+            input_vector <- unlist(strsplit(input_string, ",\\s*"))
+            input_vector <- trimws(input_vector)
           }
-          else {  # no refs are set manually, automatic mode
-            lowest_level_norm <- rowwisenorm::normalize_row(lowest_level_df = lowest_level_df,
-                                                            exp_design = exp_design,
-                                                            na.rm = input$na_rm, refFunc = input$refFunc)
-          }
-          return(lowest_level_norm)
-        }, warning = function(w) {  # print warning
-          output$normalize_row_warning <- renderText({
-            paste(w$message)
-          })
-          return(lowest_level_norm)  # still return the empty data frame that normalize_row returns in case of warning
+          lowest_level_norm <- rowwisenorm::normalize_row(lowest_level_df = lowest_level_df_pre,
+                                                          exp_design = exp_design, ref = input_vector,
+                                                          na.rm = input$na_rm, refFunc = input$refFunc)
+        }
+        else {  # no refs are set manually, automatic mode
+          lowest_level_norm <- rowwisenorm::normalize_row(lowest_level_df = lowest_level_df_pre,
+                                                          exp_design = exp_design,
+                                                          na.rm = input$na_rm, refFunc = input$refFunc)
+        }
+        return(lowest_level_norm)
+      }, warning = function(w) {  # print warning
+        output$normalize_row_warning <- renderText({
+          paste(w$message)
         })
+        return(lowest_level_norm)  # still return the empty data frame that normalize_row returns in case of warning
+      })
 
-      }
-    })
+    }
 
     # NORMALIZATION total sum
-    normalize_totalsum <- reactive({
-      lowest_level_norm <- data.frame()
+    normalize_totalsum <- function(lowest_level_df){
 
-      return_list <- readin()
-      if (! is.null(return_list)){
-        lowest_level_df <- return_list[["lowest_level_df"]]
+      # preprocessing - no sum normalize
+      lowest_level_df_pre <- preprocess(lowest_level_df, do_log = input$log2_t, do_filter = input$filterrows,
+                                    do_sum = F, do_median = input$median_norm)
+      lowest_level_norm <- rowwisenorm::sum_normalize(lowest_level_df_pre, refFunc = input$refFunc_sum,
+                                                      norm = input$norm_sum, na.rm = input$na_rm)
+      return(lowest_level_norm)
 
-        # preprocessing - no sum normalize
-        lowest_level_df <- preprocess(lowest_level_df, do_log = input$log2_t, do_filter = input$filterrows,
-                                      do_sum = F, do_median = input$median_norm)
-        lowest_level_norm <- rowwisenorm::sum_normalize(lowest_level_df, refFunc = input$refFunc_sum,
-                                                        norm = input$norm_sum, na.rm = input$na_rm)
-
-        return(lowest_level_norm)
-      }
-    })
+    }
 
     # NORMALIZATION VST
     normalize_vst <- reactive({
@@ -566,34 +612,11 @@ server <- function(input, output, session) {
 
     # show data - EXECUTION of normalization
     observeEvent(input$show_data, {
-      if (! is.null(readin())){
-        lowest_level_norm <- data.frame()
-        if(input$method == "row-wise-normalization"){
-          lowest_level_norm <- normalize_rowwise()
-        }
-        else if(input$method == "total-sum"){
-          lowest_level_norm <- normalize_totalsum()
-        }
-        else if(input$method == "VST"){
-          lowest_level_norm <- normalize_vst()
-        }
-        else if(input$method == "VSN"){
-          lowest_level_norm <- normalize_vsn()
-        }
-        else if(input$method == "quantile-normalization"){
-          lowest_level_norm <- normalize_quantile()
-        }
 
-        output$data_output <- renderPrint({
-          cat("Head of the DataFrame:\n")
-          print(head(lowest_level_norm))
-        })
-
-      } else {  # when reading fails, leave empty
-        output$data_output <- renderPrint({
-          cat("")
-        })
-      }
+      output$data_output <- renderPrint({
+        cat("Head of the DataFrame:\n")
+        print(head(lowest_level_norm))
+      })
 
     })
 
@@ -669,7 +692,12 @@ server <- function(input, output, session) {
     # download PDFs
     output$download_pdf_raw <- downloadHandler(
       filename = function(){
-        "results.pdf"
+        if (input$svg){
+          "results.zip"
+        }
+        else {
+          "results.pdf"
+        }
       },
       content = function(file) {
         return_list <- readin()
@@ -683,26 +711,55 @@ server <- function(input, output, session) {
           # svg parameter
           if (input$svg) make_svg <- T else make_svg <- F
 
-          # Save file with a progress indicator
+          # Save file with a progress indicator (only to get progress message, also works to just generate and save)
           withProgress(
-            message = 'Generating PDF...',
-            detail = 'This may take a moment...',
-            value = 0, {
-              # Generate the PDF
-              rowwisenorm::plot_results(lowest_level_df, exp_design, show_labels = show_lab, svg = make_svg)
-              Sys.sleep(0.5)  # Simulate some work for the progress bar
+              message = 'Generating file(s)...',
+              detail = 'This may take a moment...',
+              value = 0, {
 
-              # Move the generated file to the specified location
-              file.rename("results.pdf", file)
-            }
+                original_working_directory <- getwd()
+
+                # artificial temporary directory inside current working directory to save the files in the first place (otherwise files would be automatically saved in wd which could cause overwriting other files)
+                mytemp <- paste0("download_", format(Sys.time(), "%Y%m%d%H%M%S"), "_", sample(1:9999, 1))
+                dir.create(mytemp)
+
+                # Generate the PDF and SVG files in the temporary directory
+                rowwisenorm::plot_results(lowest_level_df, exp_design, output_dir = mytemp, show_labels = show_lab, svg = make_svg)
+                Sys.sleep(0.5)
+
+                setwd(mytemp)
+
+                if (make_svg){
+                  # make zip of the files inside temporary directory
+                  zip_file <- "results.zip"
+                  zip(zip_file, files = c("results.pdf", "results01.svg", "results02.svg", "results03.svg", "results04.svg"))
+
+                  # Move the ZIP archive to the chosen location
+                  file.rename(zip_file, file)
+                }
+                else {
+                  file.rename("results.pdf", file)
+                }
+
+                setwd(original_working_directory)  # set back to original working directory
+
+                # remove the temporary directory
+                unlink(mytemp, recursive = TRUE)
+              }
           )
+
         }
       }
     )
 
     output$download_pdf_norm <- downloadHandler(
       filename = function(){
-        "results.pdf"
+        if (input$svg){
+          "results.zip"
+        }
+        else {
+          "results.pdf"
+        }
       },
       content = function(file) {
         return_list <- readin()
@@ -731,19 +788,43 @@ server <- function(input, output, session) {
           # svg parameter
           if (input$svg) make_svg <- T else make_svg <- F
 
-          # Save file with a progress indicator
+          # Save file with a progress indicator (only to get progress message, also works to just generate and save)
           withProgress(
-            message = 'Generating PDF...',
+            message = 'Generating file(s)...',
             detail = 'This may take a moment...',
             value = 0, {
-              # Generate the PDF
-              rowwisenorm::plot_results(lowest_level_norm, exp_design, show_labels = show_lab, svg = make_svg)
-              Sys.sleep(0.5)  # Simulate some work for the progress bar
 
-              # Move the generated file to the specified location
-              file.rename("results.pdf", file)
+              original_working_directory <- getwd()
+
+              # artificial temporary directory inside current working directory to save the files in the first place (otherwise files would be automatically saved in wd which could cause overwriting other files)
+              mytemp <- paste0("download_", format(Sys.time(), "%Y%m%d%H%M%S"), "_", sample(1:9999, 1))
+              dir.create(mytemp)
+
+              # Generate the PDF and SVG files in the temporary directory
+              rowwisenorm::plot_results(lowest_level_norm, exp_design, output_dir = mytemp, show_labels = show_lab, svg = make_svg)
+              Sys.sleep(0.5)
+
+              setwd(mytemp)
+
+              if (make_svg){
+                # make zip of the files inside temporary directory
+                zip_file <- "results.zip"
+                zip(zip_file, files = c("results.pdf", "results01.svg", "results02.svg", "results03.svg", "results04.svg"))
+
+                # Move the ZIP archive to the chosen location
+                file.rename(zip_file, file)
+              }
+              else {
+                file.rename("results.pdf", file)
+              }
+
+              setwd(original_working_directory)  # set back to original working directory
+
+              # remove the temporary directory
+              unlink(mytemp, recursive = TRUE)
             }
           )
+
         }
       }
     )
@@ -895,12 +976,26 @@ server <- function(input, output, session) {
             message = 'Generating file...',
             detail = 'This may take a moment...',
             value = 0, {
+
+              original_working_directory <- getwd()
+
+              # artificial temporary directory inside current working directory to save the files in the first place (otherwise files would be automatically saved in wd which could cause overwriting other files)
+              mytemp <- paste0("download_", format(Sys.time(), "%Y%m%d%H%M%S"), "_", sample(1:9999, 1))
+              dir.create(mytemp)
+
               # Generate the file
-              rowwisenorm::write_outfile(lowest_level_norm)
+              rowwisenorm::write_outfile(lowest_level_norm, output_dir = mytemp)
               Sys.sleep(0.5)  # Simulate some work for the progress bar
+
+              setwd(mytemp)
 
               # Move the generated file to the specified location
               file.rename("output.csv", file)
+
+              setwd(original_working_directory)  # set back to original working directory
+
+              # remove the temporary directory
+              unlink(mytemp, recursive = TRUE)
             }
           )
         }
@@ -938,12 +1033,26 @@ server <- function(input, output, session) {
             message = 'Generating file...',
             detail = 'This may take a moment...',
             value = 0, {
+
+              original_working_directory <- getwd()
+
+              # artificial temporary directory inside current working directory to save the files in the first place (otherwise files would be automatically saved in wd which could cause overwriting other files)
+              mytemp <- paste0("download_", format(Sys.time(), "%Y%m%d%H%M%S"), "_", sample(1:9999, 1))
+              dir.create(mytemp)
+
               # Generate the file
               rowwisenorm::write_outfile(lowest_level_norm, additional_cols = additional_cols)
               Sys.sleep(0.5)  # Simulate some work for the progress bar
 
+              setwd(mytemp)
+
               # Move the generated file to the specified location
               file.rename("output_complete.csv", file)
+
+              setwd(original_working_directory)  # set back to original working directory
+
+              # remove the temporary directory
+              unlink(mytemp, recursive = TRUE)
             }
           )
         }
