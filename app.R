@@ -451,7 +451,7 @@ server <- function(input, output, session) {
       lowest_level_norm <<- data.frame()
 
       # TODO set other fields empty
-      output$data_output <- renderPrint({ NULL })  # show data field
+      output$data_output <- renderPrint({  })  # show data field
 
       return_list <- readin()
       if (! is.null(return_list)){
