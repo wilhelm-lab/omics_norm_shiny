@@ -792,14 +792,10 @@ server <- function(input, output, session) {
     )
 
 
-    # TODO GO ON HERE
-
     # show plots
     observeEvent(input$show_plots_raw, {
-      return_list <- readin()
-      if (! is.null(return_list)){
-        lowest_level_df <- return_list[["lowest_level_df"]]
-        exp_design <- return_list[["exp_design"]]
+      # only do when data was processed (data frame not empty)
+      if (nrow(lowest_level_df) != 0){
 
         output$plot1_raw <- renderPlot({
           rowwisenorm::plot_correlations(lowest_level_df)
@@ -815,40 +811,17 @@ server <- function(input, output, session) {
           if (input$show_labels_raw) show_lab <- T else show_lab <- F
           rowwisenorm::pcaPlot2(lowest_level_df, exp_design, show_labels = show_lab)
         })
-        updateTabsetPanel(session, "plots_tabset_raw", selected = "Plots Raw Data")
+        #updateTabsetPanel(session, "plots_tabset_raw", selected = "Plots Raw Data")
       }
     })
 
     observeEvent(input$show_plots_norm, {
-      return_list <- readin()
-      if (! is.null(return_list)){
-        exp_design <- return_list[["exp_design"]]
-
-        if(input$method == "row-wise-normalization"){
-          lowest_level_norm <- normalize_rowwise()
-        }
-        else if(input$method == "total-sum"){
-          lowest_level_norm <- normalize_totalsum()
-        }
-        else if(input$method == "VST"){
-          lowest_level_norm <- normalize_vst()
-        }
-        else if(input$method == "VSN"){
-          lowest_level_norm <- normalize_vsn()
-        }
-        else if(input$method == "quantile-normalization"){
-          lowest_level_norm <- normalize_quantile()
-        }
+      # only do when data was processed (data frame not empty)
+      if (nrow(lowest_level_norm) != 0){
 
         output$plot1_norm <- renderPlot({
           rowwisenorm::plot_correlations(lowest_level_norm)
         })
-        # (*) handling button for new window, use javascript file custom.js or use shinyjs
-        # observeEvent(input$openPlotWindow, {
-        #   #session$sendCustomMessage(type = "openNewWindow", message = "plot1_norm")
-        #   shinyjs::runjs("var win = window.open('', '_blank'); win.document.write($('#plot1_norm').html());")
-        #
-        # })
         output$plot2_norm <- renderPlot({
           rowwisenorm::plot_heatmap(lowest_level_norm)
         })
@@ -860,8 +833,7 @@ server <- function(input, output, session) {
           if (input$show_labels_norm) show_lab <- T else show_lab <- F
           rowwisenorm::pcaPlot2(lowest_level_norm, exp_design, show_labels = show_lab)
         })
-
-        updateTabsetPanel(session, "plots_tabset_norm", selected = "Plots Normalized Data")
+        #updateTabsetPanel(session, "plots_tabset_norm", selected = "Plots Normalized Data")
       }
 
     })
@@ -869,23 +841,8 @@ server <- function(input, output, session) {
 
     # save outfile manually
     observeEvent(input$save_outfile, {
-      return_list <- readin()
-      if (! is.null(return_list)){
-        if(input$method == "row-wise-normalization"){
-          lowest_level_norm <- normalize_rowwise()
-        }
-        else if(input$method == "total-sum"){
-          lowest_level_norm <- normalize_totalsum()
-        }
-        else if(input$method == "VST"){
-          lowest_level_norm <- normalize_vst()
-        }
-        else if(input$method == "VSN"){
-          lowest_level_norm <- normalize_vsn()
-        }
-        else if(input$method == "quantile-normalization"){
-          lowest_level_norm <- normalize_quantile()
-        }
+      # only do when data was processed (data frame not empty)
+      if (nrow(lowest_level_norm) != 0){
 
         if(input$outfile_level == "lowest-level"){
           rowwisenorm::write_outfile(lowest_level_df = lowest_level_norm,
@@ -895,10 +852,6 @@ server <- function(input, output, session) {
           if (input$filename_outfile != "") file_name <- paste(input$filename_outfile, ".csv", sep = "") else file_name <- "output.csv"  # note: hard coded as stated in write_outfile
         }
         else if(input$outfile_level == "all-columns"){
-          return_list <- readin()
-          if (! is.null(return_list)){
-            additional_cols <- return_list[["additional_cols"]]
-          }
           rowwisenorm::write_outfile(lowest_level_df = lowest_level_norm, additional_cols = additional_cols,
                                      filename = input$filename_outfile, output_dir = input$dir_outfile)
           # output message
@@ -918,23 +871,8 @@ server <- function(input, output, session) {
         "output.csv"
       },
       content = function(file) {
-        return_list <- readin()
-        if (! is.null(return_list)){
-          if(input$method == "row-wise-normalization"){
-            lowest_level_norm <- normalize_rowwise()
-          }
-          else if(input$method == "total-sum"){
-            lowest_level_norm <- normalize_totalsum()
-          }
-          else if(input$method == "VST"){
-            lowest_level_norm <- normalize_vst()
-          }
-          else if(input$method == "VSN"){
-            lowest_level_norm <- normalize_vsn()
-          }
-          else if(input$method == "quantile-normalization"){
-            lowest_level_norm <- normalize_quantile()
-          }
+        # only do when data was processed (data frame not empty)
+        if (nrow(lowest_level_norm) != 0){
 
           # Save file with a progress indicator
           withProgress(
@@ -948,7 +886,7 @@ server <- function(input, output, session) {
               mytemp <- paste0("download_", format(Sys.time(), "%Y%m%d%H%M%S"), "_", sample(1:9999, 1))
               dir.create(mytemp)
 
-              # Generate the file
+              # Generate the file in the temporary directory
               rowwisenorm::write_outfile(lowest_level_norm, output_dir = mytemp)
               Sys.sleep(0.5)  # Simulate some work for the progress bar
 
@@ -973,25 +911,8 @@ server <- function(input, output, session) {
         "output_complete.csv"
       },
       content = function(file) {
-        return_list <- readin()
-        if (! is.null(return_list)){
-          additional_cols <- return_list[["additional_cols"]]
-
-          if(input$method == "row-wise-normalization"){
-            lowest_level_norm <- normalize_rowwise()
-          }
-          else if(input$method == "total-sum"){
-            lowest_level_norm <- normalize_totalsum()
-          }
-          else if(input$method == "VST"){
-            lowest_level_norm <- normalize_vst()
-          }
-          else if(input$method == "VSN"){
-            lowest_level_norm <- normalize_vsn()
-          }
-          else if(input$method == "quantile-normalization"){
-            lowest_level_norm <- normalize_quantile()
-          }
+        # only do when data was processed (data frame not empty)
+        if (nrow(lowest_level_norm) != 0){
 
           # Save file with a progress indicator
           withProgress(
@@ -1005,8 +926,8 @@ server <- function(input, output, session) {
               mytemp <- paste0("download_", format(Sys.time(), "%Y%m%d%H%M%S"), "_", sample(1:9999, 1))
               dir.create(mytemp)
 
-              # Generate the file
-              rowwisenorm::write_outfile(lowest_level_norm, additional_cols = additional_cols)
+              # Generate the file in the temporary directory
+              rowwisenorm::write_outfile(lowest_level_norm, additional_cols = additional_cols, output_dir = mytemp)
               Sys.sleep(0.5)  # Simulate some work for the progress bar
 
               setwd(mytemp)
