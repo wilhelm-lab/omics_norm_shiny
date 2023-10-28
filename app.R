@@ -165,8 +165,6 @@ ui <- fluidPage(
                           textInput(inputId = "refs", label = "Please enter the condition names of the references, separated by a comma:")
                         ),
 
-                        textOutput("normalize_row_warning"),  # TODO locate a warning of row-wise here?
-
                         # na.rm - only for row-wise and total-sum (also specifies na.rm in row-wise function)
                         conditionalPanel(
                           condition = "input.method == 'row-wise-normalization' || input.method == 'total-sum' ",
@@ -204,8 +202,10 @@ ui <- fluidPage(
                         tags$hr(style="border-color: darkblue;"),  # horizontal line
 
                         textOutput("reading_error"),  # handle stop() call inside reading
-                        textOutput("reading_warning"),  # handle warning()
+                        textOutput("reading_warning"),  # handle warning() inside reading
+                        textOutput("normalize_row_warning"),  # not valid reference entered
                        ),
+
                ),
 
              ),
