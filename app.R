@@ -86,6 +86,9 @@ ui <- fluidPage(
                         # process button
                         actionButton("process", label = "Process", icon = icon("refresh")),
 
+                        # status output with space above
+                        uiOutput("process_status", style = "margin-top: 20px;"),
+
                        ),
                  # middle
                  column(4,
@@ -442,6 +445,7 @@ server <- function(input, output, session) {
     # defined outside of reactives/ ... -> set them new every time when clicked, use them everywhere else
     # clean everything when button clicked
 
+
     # important: assign values for global variables with <<- and not <-
     observeEvent(input$process, {
       # set empty
@@ -451,7 +455,10 @@ server <- function(input, output, session) {
       lowest_level_norm <<- data.frame()
 
       # TODO set other fields empty
-      output$data_output <- renderPrint({  })  # show data field
+      output$process_status <- renderUI({
+        HTML('')
+      })
+      output$data_output <- renderUI({ })  # show data field
 
       return_list <- readin()
       if (! is.null(return_list)){
@@ -460,9 +467,9 @@ server <- function(input, output, session) {
         additional_cols <<- return_list[["additional_cols"]]
 
         print(head(lowest_level_df))
-        print("button clicked")
+        print("= lowest raw")
         print(head(lowest_level_norm))
-        print("button clicked before norm")
+        print("= lowest before norm")
         # pre-processing (included in each normalization) and normalization
         if(input$method == "row-wise-normalization"){
           lowest_level_norm <<- normalize_rowwise(lowest_level_df, exp_design)
@@ -471,19 +478,28 @@ server <- function(input, output, session) {
           lowest_level_norm <<- normalize_totalsum(lowest_level_df)
         }
         else if(input$method == "VST"){
-          lowest_level_norm <<- normalize_vst()
+          lowest_level_norm <<- normalize_vst(lowest_level_df)
         }
         else if(input$method == "VSN"){
-          lowest_level_norm <<- normalize_vsn()
+          lowest_level_norm <<- normalize_vsn(lowest_level_df)
         }
         else if(input$method == "quantile-normalization"){
-          lowest_level_norm <<- normalize_quantile()
+          lowest_level_norm <<- normalize_quantile(lowest_level_df)
         }
 
+        # status message
+        process_status <- renderUI({
+          HTML('<i class="fa fa-check-circle" style="color: green;"></i> Data Ready!')
+        })
+        output$process_status <- process_status
+
         print(head(lowest_level_norm))
-        print("button clicked norm")
+        print("= lowest after norm")
+        print(head(lowest_level_df))
+        print("= lowest raw after norm")
       }
     })
+
 
 
     # NORMALIZATION row-wise
@@ -535,79 +551,67 @@ server <- function(input, output, session) {
     }
 
     # NORMALIZATION VST
-    normalize_vst <- reactive({
+    normalize_vst <- function(lowest_level_df){
       vst_normalized_data <- data.frame()
 
-      return_list <- readin()
-      if (! is.null(return_list)){
-        lowest_level_df <- return_list[["lowest_level_df"]]
+      # preprocessing - no log2 (no negatives allowed)
+      lowest_level_df_pre <- preprocess(lowest_level_df, do_log = F, do_filter = input$filterrows,
+                                    do_sum = input$sum_norm, do_median = input$median_norm)
 
-        # preprocessing - no log2 (no negatives allowed)
-        lowest_level_df <- preprocess(lowest_level_df, do_log = F, do_filter = input$filterrows,
-                                      do_sum = input$sum_norm, do_median = input$median_norm)
+      lowest_level_df_comp <- lowest_level_df_pre[complete.cases(lowest_level_df_pre), ]  # without missing values
+      lowest_level_df_matrix <- as.matrix(lowest_level_df_comp[! colnames(lowest_level_df_comp) %in% "row.number"])  # convert to matrix and exclude ID column
+      # calculation
+      dge_list <- DGEList(counts = lowest_level_df_matrix)  # allows no negative counts (do not log2)
+      vst_normalized_data <- calcNormFactors(dge_list)
+      vst_normalized_data <- cpm(vst_normalized_data)
+      # back convert and set column names back
+      vst_normalized_data <- as.data.frame(vst_normalized_data)
+      colnames(vst_normalized_data) <- colnames(lowest_level_df_comp[! colnames(lowest_level_df_comp) %in% "row.number"])
+      vst_normalized_data <- cbind("row.number" = lowest_level_df_comp$row.number, vst_normalized_data)  # back append ID column
 
-        lowest_level_df_comp <- lowest_level_df[complete.cases(lowest_level_df), ]  # without missing values
-        lowest_level_df_matrix <- as.matrix(lowest_level_df_comp[! colnames(lowest_level_df_comp) %in% "row.number"])  # convert to matrix and exclude ID column
-        # calculation
-        dge_list <- DGEList(counts = lowest_level_df_matrix)  # allows no negative counts (do not log2)
-        vst_normalized_data <- calcNormFactors(dge_list)
-        vst_normalized_data <- cpm(vst_normalized_data)
-        # back convert and set column names back
-        vst_normalized_data <- as.data.frame(vst_normalized_data)
-        colnames(vst_normalized_data) <- colnames(lowest_level_df_comp[! colnames(lowest_level_df_comp) %in% "row.number"])
-        vst_normalized_data <- cbind("row.number" = lowest_level_df_comp$row.number, vst_normalized_data)  # back append ID column
+      return(vst_normalized_data)
 
-        return(vst_normalized_data)
-      }
-    })
+    }
 
     # NORMALIZATION VSN
-    normalize_vsn <- reactive({
+    normalize_vsn <- function(lowest_level_df){
       vsn_normalized_data <- data.frame()
 
-      return_list <- readin()
-      if (! is.null(return_list)){
-        lowest_level_df <- return_list[["lowest_level_df"]]
+      # preprocessing
+      lowest_level_df_pre <- preprocess(lowest_level_df, do_log = input$log2_t, do_filter = input$filterrows,
+                                    do_sum = input$sum_norm, do_median = input$median_norm)
 
-        # preprocessing
-        lowest_level_df <- preprocess(lowest_level_df, do_log = input$log2_t, do_filter = input$filterrows,
-                                      do_sum = input$sum_norm, do_median = input$median_norm)
+      lowest_level_df_matrix <- as.matrix(lowest_level_df_pre[! colnames(lowest_level_df_pre) %in% "row.number"])  # convert to matrix and exclude ID column
+      lowest_level_df_matrix[is.nan(lowest_level_df_matrix)] <- NA  # safety check that no NaN but only NA present
+      # Perform VSN normalization
+      vsn_normalized_data <- normalizeVSN(lowest_level_df_matrix)
+      # back convert and set column names back
+      vsn_normalized_data <- as.data.frame(vsn_normalized_data)
+      colnames(vsn_normalized_data) <- colnames(lowest_level_df_pre[! colnames(lowest_level_df_pre) %in% "row.number"])
+      vsn_normalized_data <- cbind("row.number" = lowest_level_df_pre$row.number, vsn_normalized_data)  # back append ID column
 
-        lowest_level_df_matrix <- as.matrix(lowest_level_df[! colnames(lowest_level_df) %in% "row.number"])  # convert to matrix and exclude ID column
-        lowest_level_df_matrix[is.nan(lowest_level_df_matrix)] <- NA  # safety check that no NaN but only NA present
-        # Perform VSN normalization
-        vsn_normalized_data <- normalizeVSN(lowest_level_df_matrix)
-        # back convert and set column names back
-        vsn_normalized_data <- as.data.frame(vsn_normalized_data)
-        colnames(vsn_normalized_data) <- colnames(lowest_level_df[! colnames(lowest_level_df) %in% "row.number"])
-        vsn_normalized_data <- cbind("row.number" = lowest_level_df$row.number, vsn_normalized_data)  # back append ID column
+      return(vsn_normalized_data)
 
-        return(vsn_normalized_data)
-      }
-    })
+    }
 
     # NORMALIZATION Quantile
-    normalize_quantile <- reactive({
+    normalize_quantile <- function(lowest_level_df){
       quantile_normalized <- data.frame()
 
-      return_list <- readin()
-      if (! is.null(return_list)){
-        lowest_level_df <- return_list[["lowest_level_df"]]
+      # preprocessing
+      lowest_level_df_pre <- preprocess(lowest_level_df, do_log = input$log2_t, do_filter = input$filterrows,
+                                    do_sum = input$sum_norm, do_median = input$median_norm)
 
-        # preprocessing
-        lowest_level_df <- preprocess(lowest_level_df, do_log = input$log2_t, do_filter = input$filterrows,
-                                      do_sum = input$sum_norm, do_median = input$median_norm)
+      lowest_level_df_matrix <- as.matrix(lowest_level_df_pre[! colnames(lowest_level_df_pre) %in% "row.number"])  # convert to matrix and exclude ID column
+      quantile_normalized <- preprocessCore::normalize.quantiles(lowest_level_df_matrix)
+      # back convert and set column names back
+      quantile_normalized <- as.data.frame(quantile_normalized)
+      colnames(quantile_normalized) <- colnames(lowest_level_df_pre[! colnames(lowest_level_df_pre) %in% "row.number"])
+      quantile_normalized <- cbind("row.number" = lowest_level_df_pre$row.number, quantile_normalized)  # back append ID column
 
-        lowest_level_df_matrix <- as.matrix(lowest_level_df[! colnames(lowest_level_df) %in% "row.number"])  # convert to matrix and exclude ID column
-        quantile_normalized <- preprocessCore::normalize.quantiles(lowest_level_df_matrix)
-        # back convert and set column names back
-        quantile_normalized <- as.data.frame(quantile_normalized)
-        colnames(quantile_normalized) <- colnames(lowest_level_df[! colnames(lowest_level_df) %in% "row.number"])
-        quantile_normalized <- cbind("row.number" = lowest_level_df$row.number, quantile_normalized)  # back append ID column
+      return(quantile_normalized)
 
-        return(quantile_normalized)
-      }
-    })
+    }
 
 
     # show data - EXECUTION of normalization
@@ -623,11 +627,8 @@ server <- function(input, output, session) {
 
     # save PDF manually
     observeEvent(input$save_pdf_raw, {
-      return_list <- readin()
-      if (! is.null(return_list)){
-        lowest_level_df <- return_list[["lowest_level_df"]]
-        exp_design <- return_list[["exp_design"]]
-
+      # only do when data was processed (data frame not empty)
+      if (nrow(lowest_level_df) != 0){
         # show labels parameter
         if (input$show_labels) show_lab <- T else show_lab <- F
 
@@ -649,26 +650,8 @@ server <- function(input, output, session) {
     })
 
     observeEvent(input$save_pdf_norm, {
-      return_list <- readin()
-      if (! is.null(return_list)){
-        exp_design <- return_list[["exp_design"]]
-
-        if(input$method == "row-wise-normalization"){
-          lowest_level_norm <- normalize_rowwise()
-        }
-        else if(input$method == "total-sum"){
-          lowest_level_norm <- normalize_totalsum()
-        }
-        else if(input$method == "VST"){
-          lowest_level_norm <- normalize_vst()
-        }
-        else if(input$method == "VSN"){
-          lowest_level_norm <- normalize_vsn()
-        }
-        else if(input$method == "quantile-normalization"){
-          lowest_level_norm <- normalize_quantile()
-        }
-
+      # only do when data was processed (data frame not empty)
+      if (nrow(lowest_level_norm) != 0){
         # show labels parameter
         if (input$show_labels) show_lab <- T else show_lab <- F
 
@@ -700,11 +683,8 @@ server <- function(input, output, session) {
         }
       },
       content = function(file) {
-        return_list <- readin()
-        if (! is.null(return_list)){
-          lowest_level_df <- return_list[["lowest_level_df"]]
-          exp_design <- return_list[["exp_design"]]
-
+        # only do when data was processed (data frame not empty)
+        if (nrow(lowest_level_df) != 0){
           # show labels parameter
           if (input$show_labels) show_lab <- T else show_lab <- F
 
@@ -762,26 +742,8 @@ server <- function(input, output, session) {
         }
       },
       content = function(file) {
-        return_list <- readin()
-        if (! is.null(return_list)){
-          exp_design <- return_list[["exp_design"]]
-
-          if(input$method == "row-wise-normalization"){
-            lowest_level_norm <- normalize_rowwise()
-          }
-          else if(input$method == "total-sum"){
-            lowest_level_norm <- normalize_totalsum()
-          }
-          else if(input$method == "VST"){
-            lowest_level_norm <- normalize_vst()
-          }
-          else if(input$method == "VSN"){
-            lowest_level_norm <- normalize_vsn()
-          }
-          else if(input$method == "quantile-normalization"){
-            lowest_level_norm <- normalize_quantile()
-          }
-
+        # only do when data was processed (data frame not empty)
+        if (nrow(lowest_level_norm) != 0){
           # show labels parameter
           if (input$show_labels) show_lab <- T else show_lab <- F
 
@@ -828,6 +790,9 @@ server <- function(input, output, session) {
         }
       }
     )
+
+
+    # TODO GO ON HERE
 
     # show plots
     observeEvent(input$show_plots_raw, {
