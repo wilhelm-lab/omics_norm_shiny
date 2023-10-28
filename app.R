@@ -223,7 +223,10 @@ ui <- fluidPage(
 
                         # button for showing data
                         actionButton(inputId = "show_data", label = "Show normalized data"),
-                        verbatimTextOutput("data_output"),
+
+                        # display data as a table, fill available space without overlapping right column
+                        div(style = "max-width: 100%; overflow-x: auto;", tableOutput("data_output")),
+
                         ),
                  # right
                  column(6,
@@ -617,9 +620,8 @@ server <- function(input, output, session) {
     # show data - EXECUTION of normalization
     observeEvent(input$show_data, {
 
-      output$data_output <- renderPrint({
-        cat("Head of the DataFrame:\n")
-        print(head(lowest_level_norm))
+      output$data_output <- renderTable({
+        head(lowest_level_norm)
       })
 
     })
