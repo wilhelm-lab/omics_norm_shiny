@@ -99,11 +99,17 @@ ui <- fluidPage(
                         ),
                         hr(),  # horizontal line
 
-                        # filtering of reverse, only by site, contaminant
-                        selectInput(inputId = "filter", label = "Choose which features should be filtered out",
-                                    choices = c("only by site" = "only by site", "reverse" = "reverse",
-                                                "contaminant" = "contaminant"), multiple = TRUE),
-                        textOutput("selected_filter"),
+                        # filtering of features - only show a checkbox if feature is available in data
+                        uiOutput("feature_text"),
+                        uiOutput("onlyBySiteCheckbox"),
+                        uiOutput("reverseCheckbox"),
+                        uiOutput("contaminantCheckbox"),
+                        hr(),
+
+                        # old version filtering of reverse, only by site, contaminant
+                        # selectInput(inputId = "filter", label = "Choose which features should be filtered out",
+                        #             choices = c("only by site" = "only by site", "reverse" = "reverse",
+                        #                         "contaminant" = "contaminant"), multiple = TRUE),
 
                         # log2
                         conditionalPanel(
@@ -361,20 +367,85 @@ server <- function(input, output, session) {
       paste("Your selected method:", input$method)
     })
 
-    # booleans stating if a choice was set - note: hardcoded as it was named above
-    boolean_only_by_site <- reactive({
-      "only by site" %in% input$filter
+
+    # update possible feature filtering options whenever a file is uploaded - until #*
+    uploaded_data <- reactive({
+      req(input$data)
+      inFile <- input$data
+      ext <- tools::file_ext(inFile$name)
+      if (ext == "csv") {
+        df <- read.csv(inFile$datapath, header = TRUE, stringsAsFactors = FALSE)
+      } else {
+        df <- read.table(inFile$datapath, header = TRUE, sep = "\t", stringsAsFactors = FALSE)
+      }
+      return(df)
     })
 
-    boolean_reverse <- reactive({
-      "reverse" %in% input$filter
+    # Reactive value to store available features
+    available_features <- reactiveVal(NULL)
+
+    # Clear the available features when a new file is uploaded
+    observeEvent(input$data, {
+      available_features(NULL)
     })
 
-    boolean_contaminant <- reactive({
-      "contaminant" %in% input$filter
+    observe({
+      df <- uploaded_data()
+
+      # Get available features for the current data
+      features <- c("only by site", "reverse", "contaminant")
+      available_features_data <- character(0)
+
+      for (feat in features) {
+        regex_pattern <- gsub("\\s+", ".*", feat)
+        matching_col <- grep(regex_pattern, colnames(df), value = TRUE, ignore.case = TRUE, perl = TRUE)
+        if (length(matching_col) == 1) {  # if exactly one column matches
+          available_features_data <- append(available_features_data, feat)  # add the feature as a choice
+        }
+      }
+
+      # Update the available features using the reactiveVal
+      available_features(available_features_data)
     })
 
-    # reading in of uploaded files - using booleans of picked filters
+    # when at least one feature is present, print title for feature filtering
+    output$feature_text <- renderText({
+      if ((! is.null(available_features())) & (! identical(available_features(), character(0)))){
+        "Features that can be filtered:"
+      } else {
+        NULL
+      }
+    })
+
+    # show each checkbox only when feature is available
+    output$onlyBySiteCheckbox <- renderUI({
+      if ("only by site" %in% available_features()) {
+        checkboxInput("onlyBySite", "Only by Site", value = FALSE)
+      } else {
+        NULL
+      }
+    })
+
+    output$reverseCheckbox <- renderUI({
+      if ("reverse" %in% available_features()) {
+        checkboxInput("reverse", "Reverse", value = FALSE)
+      } else {
+        NULL
+      }
+    })
+
+    output$contaminantCheckbox <- renderUI({
+      if ("contaminant" %in% available_features()) {
+        checkboxInput("contaminant", "Contaminant", value = FALSE)
+      } else {
+        NULL
+      }
+    })
+
+    #*
+
+
+    # reading of uploaded files
     readin <- reactive({
       # clear for every new call
       output$reading_warning <- renderText({
@@ -385,10 +456,14 @@ server <- function(input, output, session) {
       })
       req(input$data)
       req(input$exp_design)
+      # if feature is present, set as the choice, otherwise set filtering for this feature as FALSE
+      if (! is.null(input$onlyBySite)) boolean_only_by_site <- input$onlyBySite else boolean_only_by_site <- F
+      if (! is.null(input$reverse)) boolean_reverse <- input$reverse else boolean_reverse <- F
+      if (! is.null(input$contaminant)) boolean_contaminant <- input$contaminant else boolean_contaminant <- F
       tryCatch({
         return_list <- rowwisenorm::read_files(data = input$data$datapath, design = input$exp_design$datapath,
-                                               rm_only_by_site = boolean_only_by_site(), rm_reverse = boolean_reverse(),
-                                               rm_contaminant = boolean_contaminant())
+                                               rm_only_by_site = boolean_only_by_site, rm_reverse = boolean_reverse,
+                                               rm_contaminant = boolean_contaminant)
 
         return(return_list)
       }, warning = function(w) {  # print first warning
@@ -465,7 +540,7 @@ server <- function(input, output, session) {
 
       return_list <- readin()
       if (! is.null(return_list)){
-        lowest_level_df <<- return_list[["lowest_level_df"]]
+        lowest_level_df <<- return_list[["lowest_level_df"]]  # TODO this is raw but feature-filtered! ok? (it is input for following normalization!)
         exp_design <<- return_list[["exp_design"]]
         additional_cols <<- return_list[["additional_cols"]]
 
