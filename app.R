@@ -362,13 +362,12 @@ ui <- fluidPage(
 
 # Define server logic required to draw a histogram
 server <- function(input, output, session) {
-
     output$selected_method <- renderText({
       paste("Your selected method:", input$method)
     })
 
 
-    # update possible feature filtering options whenever a file is uploaded - until #*
+    # update possible feature filtering choices depending on data, whenever a file is uploaded - until #*
     uploaded_data <- reactive({
       req(input$data)
       inFile <- input$data
@@ -518,11 +517,7 @@ server <- function(input, output, session) {
       return(lowest_level_df)
     }
 
-    # BUTTON PROCESS: when clicked, new read in, new preprocess, new check method and do normalization
-    # save lowest level df, the other return list elements and the lowest level norm all in variables
-    # defined outside of reactives/ ... -> set them new every time when clicked, use them everywhere else
-    # clean everything when button clicked
-
+    # PROCESS BUTTON:
 
     # important: assign values for global variables with <<- and not <-
     observeEvent(input$process, {
@@ -537,6 +532,15 @@ server <- function(input, output, session) {
         HTML('')
       })
       output$data_output <- renderUI({ })  # show data field
+      output$plot1_raw <- renderUI({ })
+      output$plot2_raw <- renderUI({ })
+      output$plot3_raw <- renderUI({ })
+      output$plot4_raw <- renderUI({ })
+      output$plot1_norm <- renderUI({ })
+      output$plot2_norm <- renderUI({ })
+      output$plot3_norm <- renderUI({ })
+      output$plot4_norm <- renderUI({ })
+
 
       return_list <- readin()
       if (! is.null(return_list)){
