@@ -17,21 +17,19 @@ library(edgeR)  # for VST
 library(lumi)  # for VSN
 library(preprocessCore)  # for Quantile normalization
 
-library(shinyjs)
-
 # setting upload size to 100 MB max
 options(shiny.maxRequestSize=100*1024^2)
 
 # initialize global variables
-lowest_level_df <- data.frame()
+lowest_level_df <- data.frame()  # data frame coming from reading function
 exp_design <- data.frame()
 additional_cols <- data.frame()
 lowest_level_norm <- data.frame()
-
+lowest_level_df_raw <- data.frame()  # raw data without any modification (no features filtered)
+lowest_level_df_pre <- data.frame()  # raw data pre-processed (with before feature filtering)
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
-    useShinyjs(),
 
     # Application title
     titlePanel(
@@ -106,7 +104,6 @@ ui <- fluidPage(
                         uiOutput("onlyBySiteCheckbox"),
                         uiOutput("reverseCheckbox"),
                         uiOutput("contaminantCheckbox"),
-
                         hr(),
 
                         # old version filtering of reverse, only by site, contaminant
@@ -336,6 +333,25 @@ ui <- fluidPage(
                         plotOutput("plot3_raw"),
                         plotOutput("plot4_raw"),
                         ),
+                 # middle - raw pre-processed
+                 column(4,
+                        div(
+                          h3("Plots of Raw Data Pre-Processed", style = "font-size: 20px; font-weight:750;"),
+                          class = "title-div"
+                        ),
+                        hr(),  # horizontal line
+
+                        # show labels parameter for PCA labels
+                        checkboxInput(inputId = "show_labels_raw_pre", label = "Show labels inside PCA plot", value = FALSE),
+
+                        # button for showing plots raw data pre-processed
+                        actionButton(inputId = "show_plots_raw_pre", label = "Show plots of raw data pre-processed"),
+
+                        plotOutput("plot1_raw_pre"),
+                        plotOutput("plot2_raw_pre"),
+                        plotOutput("plot3_raw_pre"),
+                        plotOutput("plot4_raw_pre"),
+                        ),
                  # right - normalized
                  column(4,
                         div(
@@ -371,6 +387,8 @@ server <- function(input, output, session) {
 
 
     # update possible feature filtering choices depending on data, whenever a file is uploaded - until #*
+
+    # important: later called to get completely raw data frame (without any feature filtering done)
     uploaded_data <- reactive({
       req(input$data)
       inFile <- input$data
@@ -426,7 +444,6 @@ server <- function(input, output, session) {
         checkboxInput("onlyBySite", "Only by Site", value = FALSE)
       } else {
         NULL
-
       }
     })
 
@@ -529,6 +546,7 @@ server <- function(input, output, session) {
       exp_design <<- data.frame()
       additional_cols <<- data.frame()
       lowest_level_norm <<- data.frame()
+      lowest_level_df_pre <<- data.frame()
 
       # set any fields that show results empty
       output$process_status <- renderUI({
@@ -546,9 +564,14 @@ server <- function(input, output, session) {
 
       return_list <- readin()
       if (! is.null(return_list)){
-        lowest_level_df <<- return_list[["lowest_level_df"]]  # TODO this is raw but feature-filtered! ok? (it is input for following normalization!)
+        lowest_level_df <<- return_list[["lowest_level_df"]]  # raw on lowest level but feature-filtered and ID column -> further used in pre-processing
         exp_design <<- return_list[["exp_design"]]
         additional_cols <<- return_list[["additional_cols"]]
+
+        # completely raw data with all columns  (no ID column, raw is never needed but for plot comparison)
+        lowest_level_df_raw <<- uploaded_data()
+        # reduce to lowest level
+        lowest_level_df_raw <<- lowest_level_df_raw[colnames(lowest_level_df_raw) %in% colnames(lowest_level_df)]
 
         # print(head(lowest_level_df))
         # print("= lowest raw")
@@ -593,7 +616,7 @@ server <- function(input, output, session) {
       output$normalize_row_warning <- renderText({ NULL })
 
       # preprocessing
-      lowest_level_df_pre <- preprocess(lowest_level_df, do_log = input$log2_t, do_filter = input$filterrows,
+      lowest_level_df_pre <<- preprocess(lowest_level_df, do_log = input$log2_t, do_filter = input$filterrows,
                                     do_sum = input$sum_norm, do_median = input$median_norm)
 
       tryCatch({
@@ -627,7 +650,7 @@ server <- function(input, output, session) {
     normalize_totalsum <- function(lowest_level_df){
 
       # preprocessing - no sum normalize
-      lowest_level_df_pre <- preprocess(lowest_level_df, do_log = input$log2_t, do_filter = input$filterrows,
+      lowest_level_df_pre <<- preprocess(lowest_level_df, do_log = input$log2_t, do_filter = input$filterrows,
                                     do_sum = F, do_median = input$median_norm)
       lowest_level_norm <- rowwisenorm::sum_normalize(lowest_level_df_pre, refFunc = input$refFunc_sum,
                                                       norm = input$norm_sum, na.rm = input$na_rm)
@@ -640,7 +663,7 @@ server <- function(input, output, session) {
       vst_normalized_data <- data.frame()
 
       # preprocessing - no log2 (no negatives allowed)
-      lowest_level_df_pre <- preprocess(lowest_level_df, do_log = F, do_filter = input$filterrows,
+      lowest_level_df_pre <<- preprocess(lowest_level_df, do_log = F, do_filter = input$filterrows,
                                     do_sum = input$sum_norm, do_median = input$median_norm)
 
       lowest_level_df_comp <- lowest_level_df_pre[complete.cases(lowest_level_df_pre), ]  # without missing values
@@ -663,7 +686,7 @@ server <- function(input, output, session) {
       vsn_normalized_data <- data.frame()
 
       # preprocessing
-      lowest_level_df_pre <- preprocess(lowest_level_df, do_log = input$log2_t, do_filter = input$filterrows,
+      lowest_level_df_pre <<- preprocess(lowest_level_df, do_log = input$log2_t, do_filter = input$filterrows,
                                     do_sum = input$sum_norm, do_median = input$median_norm)
 
       lowest_level_df_matrix <- as.matrix(lowest_level_df_pre[! colnames(lowest_level_df_pre) %in% "row.number"])  # convert to matrix and exclude ID column
@@ -684,7 +707,7 @@ server <- function(input, output, session) {
       quantile_normalized <- data.frame()
 
       # preprocessing
-      lowest_level_df_pre <- preprocess(lowest_level_df, do_log = input$log2_t, do_filter = input$filterrows,
+      lowest_level_df_pre <<- preprocess(lowest_level_df, do_log = input$log2_t, do_filter = input$filterrows,
                                     do_sum = input$sum_norm, do_median = input$median_norm)
 
       lowest_level_df_matrix <- as.matrix(lowest_level_df_pre[! colnames(lowest_level_df_pre) %in% "row.number"])  # convert to matrix and exclude ID column
@@ -876,26 +899,46 @@ server <- function(input, output, session) {
     )
 
 
-    # show plots
+    # show plots - completely raw, raw pre-processed, normalized
     observeEvent(input$show_plots_raw, {
       # only do when data was processed (data frame not empty)
-      if (nrow(lowest_level_df) != 0){
+      if (nrow(lowest_level_df_raw) != 0){
 
         output$plot1_raw <- renderPlot({
-          rowwisenorm::plot_correlations(lowest_level_df)
+          rowwisenorm::plot_correlations(lowest_level_df_raw)
         })
         output$plot2_raw <- renderPlot({
-          rowwisenorm::plot_heatmap(lowest_level_df)
+          rowwisenorm::plot_heatmap(lowest_level_df_raw)
         })
         output$plot3_raw <- renderPlot({
-          rowwisenorm::pcaPlot(lowest_level_df)
+          rowwisenorm::pcaPlot(lowest_level_df_raw)
         })
         output$plot4_raw <- renderPlot({
           # show labels parameter
           if (input$show_labels_raw) show_lab <- T else show_lab <- F
-          rowwisenorm::pcaPlot2(lowest_level_df, exp_design, show_labels = show_lab)
+          rowwisenorm::pcaPlot2(lowest_level_df_raw, exp_design, show_labels = show_lab)
         })
-        #updateTabsetPanel(session, "plots_tabset_raw", selected = "Plots Raw Data")
+      }
+    })
+
+    observeEvent(input$show_plots_raw_pre, {
+      # only do when data was processed (data frame not empty)
+      if (nrow(lowest_level_df_pre) != 0){
+
+        output$plot1_raw_pre <- renderPlot({
+          rowwisenorm::plot_correlations(lowest_level_df_pre)
+        })
+        output$plot2_raw_pre <- renderPlot({
+          rowwisenorm::plot_heatmap(lowest_level_df_pre)
+        })
+        output$plot3_raw_pre <- renderPlot({
+          rowwisenorm::pcaPlot(lowest_level_df_pre)
+        })
+        output$plot4_raw_pre <- renderPlot({
+          # show labels parameter
+          if (input$show_labels_raw_pre) show_lab <- T else show_lab <- F
+          rowwisenorm::pcaPlot2(lowest_level_df_pre, exp_design, show_labels = show_lab)
+        })
       }
     })
 
@@ -917,9 +960,7 @@ server <- function(input, output, session) {
           if (input$show_labels_norm) show_lab <- T else show_lab <- F
           rowwisenorm::pcaPlot2(lowest_level_norm, exp_design, show_labels = show_lab)
         })
-        #updateTabsetPanel(session, "plots_tabset_norm", selected = "Plots Normalized Data")
       }
-
     })
 
 
