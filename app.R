@@ -17,6 +17,7 @@ library(edgeR)  # for VST
 library(lumi)  # for VSN
 library(preprocessCore)  # for Quantile normalization
 
+library(shinyjs)
 
 # setting upload size to 100 MB max
 options(shiny.maxRequestSize=100*1024^2)
@@ -30,6 +31,7 @@ lowest_level_norm <- data.frame()
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
+    useShinyjs(),
 
     # Application title
     titlePanel(
@@ -104,6 +106,7 @@ ui <- fluidPage(
                         uiOutput("onlyBySiteCheckbox"),
                         uiOutput("reverseCheckbox"),
                         uiOutput("contaminantCheckbox"),
+
                         hr(),
 
                         # old version filtering of reverse, only by site, contaminant
@@ -405,6 +408,7 @@ server <- function(input, output, session) {
 
       # Update the available features using the reactiveVal
       available_features(available_features_data)
+
     })
 
     # when at least one feature is present, print title for feature filtering
@@ -422,6 +426,7 @@ server <- function(input, output, session) {
         checkboxInput("onlyBySite", "Only by Site", value = FALSE)
       } else {
         NULL
+
       }
     })
 
@@ -440,8 +445,6 @@ server <- function(input, output, session) {
         NULL
       }
     })
-
-    #*
 
 
     # reading of uploaded files
@@ -527,7 +530,7 @@ server <- function(input, output, session) {
       additional_cols <<- data.frame()
       lowest_level_norm <<- data.frame()
 
-      # TODO set other fields empty
+      # set any fields that show results empty
       output$process_status <- renderUI({
         HTML('')
       })
@@ -541,17 +544,17 @@ server <- function(input, output, session) {
       output$plot3_norm <- renderUI({ })
       output$plot4_norm <- renderUI({ })
 
-
       return_list <- readin()
       if (! is.null(return_list)){
         lowest_level_df <<- return_list[["lowest_level_df"]]  # TODO this is raw but feature-filtered! ok? (it is input for following normalization!)
         exp_design <<- return_list[["exp_design"]]
         additional_cols <<- return_list[["additional_cols"]]
 
-        print(head(lowest_level_df))
-        print("= lowest raw")
-        print(head(lowest_level_norm))
-        print("= lowest before norm")
+        # print(head(lowest_level_df))
+        # print("= lowest raw")
+        # print(head(lowest_level_norm))
+        # print("= lowest before norm")
+
         # pre-processing (included in each normalization) and normalization
         if(input$method == "row-wise-normalization"){
           lowest_level_norm <<- normalize_rowwise(lowest_level_df, exp_design)
@@ -575,10 +578,10 @@ server <- function(input, output, session) {
         })
         output$process_status <- process_status
 
-        print(head(lowest_level_norm))
-        print("= lowest after norm")
-        print(head(lowest_level_df))
-        print("= lowest raw after norm")
+        # print(head(lowest_level_norm))
+        # print("= lowest after norm")
+        # print(head(lowest_level_df))
+        # print("= lowest raw after norm")
       }
     })
 
