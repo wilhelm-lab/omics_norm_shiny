@@ -42,22 +42,42 @@ ui <- fluidPage(
     tags$head(tags$style("#reading_error{color: red;}")),
     tags$head(tags$style("#normalize_row_warning{color: red;}")),
 
-    # choose method - fluidRow and column() make it occur centered
-    fluidRow(
-      column(8, align="center", offset=2,
-             selectInput(inputId = "method", label = "Method",
-                         choices = c("row-wise-normalization" = "row-wise-normalization",
-                                     "total-sum" = "total-sum", "VST" = "VST", "VSN" = "VSN",
-                                     "quantile-normalization" = "quantile-normalization")),
-             textOutput("selected_method"),
-             )
-    ),
-    # hr(),  # horizontal line
 
     # part the ui in three parts
     tabsetPanel(
       # left tab
       tabPanel("Input and Settings",
+               # fluid row for the numbers 1 to 3
+               fluidRow(
+                 style = "margin-top: 10px;", # Add margin to the top of the fluidRow
+                 column(4, align = "center",
+                        div(
+                          style = "border: 2px solid black; border-radius: 50%; width: 50px; height: 50px; display: flex; justify-content: center; align-items: center; background-color: rgba(0, 0, 139, 0.5);",
+                          h2(
+                            "1",
+                            style = "line-height: 50px; margin: 0; color: white;"
+                          )
+                        )
+                 ),  # First column with the number 1 inside a round circle
+                 column(4, align = "center",
+                        div(
+                          style = "border: 2px solid black; border-radius: 50%; width: 50px; height: 50px; display: flex; justify-content: center; align-items: center; background-color: rgba(0, 0, 139, 0.5);",
+                          h2(
+                            "2",
+                            style = "line-height: 50px; margin: 0; color: white;"
+                          )
+                        )
+                 ),  # Second column with the number 2 inside a round circle
+                 column(4, align = "center",
+                        div(
+                          style = "border: 2px solid black; border-radius: 50%; width: 50px; height: 50px; display: flex; justify-content: center; align-items: center; background-color: rgba(0, 0, 139, 0.5);",
+                          h2(
+                            "3",
+                            style = "line-height: 50px; margin: 0; color: white;"
+                          )
+                        )
+                 )  # Third column with the number 3 inside a round circle
+               ),
                fluidRow(
                  # left
                  column(4,
@@ -76,15 +96,20 @@ ui <- fluidPage(
                                   accept = c(".csv, .tsv, .txt", "text/*")),
                         textOutput("file_name_exp_design"),
 
-                        # process button
-                        actionButton("process", label = "Process", icon = icon("refresh")),
-
-                        # status output with space above
-                        uiOutput("process_status", style = "margin-top: 20px;"),
-
                        ),
                  # middle
                  column(4,
+                        # choose method
+                        div(
+                          h3("Normalization Method", style = "font-size: 20px; font-weight:750;"),
+                          class = "title-div"
+                        ),
+                        hr(),
+                        selectInput(inputId = "method", label = "Method",
+                                    choices = c("row-wise-normalization" = "row-wise-normalization",
+                                                "total-sum" = "total-sum", "VST" = "VST", "VSN" = "VSN",
+                                                "quantile-normalization" = "quantile-normalization")),
+                        textOutput("selected_method"),
                         # Preprocessing possible for all methods: - but log2 not for VST allowed (no negative values allowed)
                         div(
                           h3("Preprocessing", style = "font-size: 20px; font-weight:750;"),
@@ -193,6 +218,18 @@ ui <- fluidPage(
                         ),
                  # right
                  column(4,
+                        # process button
+                        div(
+                          h2("Start calculation", style = "font-size: 20px; font-weight:750;"),
+                          class = "title-div"
+                        ),
+                        hr(),
+                        textOutput("process_note"),
+                        actionButton("process", label = "Process", icon = icon("refresh")),
+
+                        # status output with space above
+                        uiOutput("process_status", style = "margin-top: 20px;"),
+
                         # Notifications (warning and error messages)
                         div(
                           h2("Notifications", style = "font-size: 18px; font-weight:550; color:darkblue"),
@@ -389,6 +426,9 @@ server <- function(input, output, session) {
       paste("Your selected method:", input$method)
     })
 
+    output$process_note <- renderText({
+      "Click the button to load the data and perform normalization."
+    })
 
     # update possible feature filtering choices depending on data, whenever a file is uploaded - until #*
 
