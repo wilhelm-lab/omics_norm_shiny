@@ -20,13 +20,6 @@ library(preprocessCore)  # for Quantile normalization
 # setting upload size to 100 MB max
 options(shiny.maxRequestSize=100*1024^2)
 
-# initialize global variables
-lowest_level_df <- data.frame()  # data frame coming from reading function
-exp_design <- data.frame()
-additional_cols <- data.frame()
-lowest_level_norm <- data.frame()
-lowest_level_df_raw <- data.frame()  # raw data without any modification (no features filtered)
-lowest_level_df_pre <- data.frame()  # raw data pre-processed (with before feature filtering)
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
@@ -381,6 +374,17 @@ ui <- fluidPage(
 
 # Define server logic required to draw a histogram
 server <- function(input, output, session) {
+
+    # initialize global variables - inside server makes them session specific
+    lowest_level_df <- data.frame()  # data frame coming from reading function
+    exp_design <- data.frame()
+    additional_cols <- data.frame()
+    lowest_level_norm <- data.frame()
+    lowest_level_df_raw <- data.frame()  # raw data without any modification (no features filtered)
+    lowest_level_df_pre <- data.frame()  # raw data pre-processed (pre-processed lowest_level_df)
+    pca_colors <- c()
+    pca_symbols <- c()
+
     output$selected_method <- renderText({
       paste("Your selected method:", input$method)
     })
@@ -465,7 +469,7 @@ server <- function(input, output, session) {
 
 
     # reading of uploaded files
-    readin <- reactive({
+    readin <- function(){  # function makes it possible to control when it is executed explicitly (not as reactive)
       # clear for every new call
       output$reading_warning <- renderText({
         NULL
@@ -483,7 +487,6 @@ server <- function(input, output, session) {
         return_list <- rowwisenorm::read_files(data = input$data$datapath, design = input$exp_design$datapath,
                                                rm_only_by_site = boolean_only_by_site, rm_reverse = boolean_reverse,
                                                rm_contaminant = boolean_contaminant)
-
         return(return_list)
       }, warning = function(w) {  # print first warning
         output$reading_warning <- renderText({
@@ -497,7 +500,7 @@ server <- function(input, output, session) {
         return(NULL)  # in case sanity checks fail, return NULL -> is.null in the following always checked
       })
 
-    })
+    }
 
 
     # print note when filter rows is set
@@ -548,6 +551,9 @@ server <- function(input, output, session) {
       lowest_level_norm <<- data.frame()
       lowest_level_df_pre <<- data.frame()
 
+      pca_colors <<- character(0)  # Reset pca_colors
+      pca_symbols <<- character(0) # Reset pca_symbols
+
       # set any fields that show results empty
       output$process_status <- renderUI({
         HTML('')
@@ -557,6 +563,10 @@ server <- function(input, output, session) {
       output$plot2_raw <- renderUI({ })
       output$plot3_raw <- renderUI({ })
       output$plot4_raw <- renderUI({ })
+      output$plot1_raw_pre <- renderUI({ })
+      output$plot2_raw_pre <- renderUI({ })
+      output$plot3_raw_pre <- renderUI({ })
+      output$plot4_raw_pre <- renderUI({ })
       output$plot1_norm <- renderUI({ })
       output$plot2_norm <- renderUI({ })
       output$plot3_norm <- renderUI({ })
@@ -567,6 +577,9 @@ server <- function(input, output, session) {
         lowest_level_df <<- return_list[["lowest_level_df"]]  # raw on lowest level but feature-filtered and ID column -> further used in pre-processing
         exp_design <<- return_list[["exp_design"]]
         additional_cols <<- return_list[["additional_cols"]]
+
+        pca_colors <<- return_list[["pca_colors"]]
+        pca_symbols <<- return_list[["pca_symbols"]]
 
         # completely raw data with all columns  (no ID column, raw is never needed but for plot comparison)
         lowest_level_df_raw <<- uploaded_data()
@@ -744,7 +757,8 @@ server <- function(input, output, session) {
 
         rowwisenorm::plot_results(lowest_level_df = lowest_level_df, exp_design = exp_design,
                                   main = input$filename_raw, output_dir = input$dir_raw,
-                                  show_labels = show_lab, svg = make_svg)
+                                  show_labels = show_lab, svg = make_svg,
+                                  set_colors = pca_colors, set_symbols = pca_symbols)  # set colors and symbols
 
         # output message stating where the file was saved
         if (input$dir_raw != "")  dir_path <- input$dir_raw else dir_path <- "current working directory"
@@ -767,7 +781,8 @@ server <- function(input, output, session) {
 
         rowwisenorm::plot_results(lowest_level_df = lowest_level_norm, exp_design = exp_design,
                                   main = input$filename_norm, output_dir = input$dir_norm,
-                                  show_labels = show_lab, svg = make_svg)
+                                  show_labels = show_lab, svg = make_svg,
+                                  set_colors = pca_colors, set_symbols = pca_symbols)  # set colors and symbols
 
         # output message stating where the file was saved
         if (input$dir_norm != "")  dir_path <- input$dir_norm else dir_path <- "current working directory"
@@ -811,7 +826,9 @@ server <- function(input, output, session) {
                 dir.create(mytemp)
 
                 # Generate the PDF and SVG files in the temporary directory
-                rowwisenorm::plot_results(lowest_level_df, exp_design, output_dir = mytemp, show_labels = show_lab, svg = make_svg)
+                rowwisenorm::plot_results(lowest_level_df, exp_design, output_dir = mytemp,
+                                          show_labels = show_lab, svg = make_svg,
+                                          set_colors = pca_colors, set_symbols = pca_symbols)  # set colors and symbols
                 Sys.sleep(0.5)
 
                 setwd(mytemp)
@@ -870,7 +887,9 @@ server <- function(input, output, session) {
               dir.create(mytemp)
 
               # Generate the PDF and SVG files in the temporary directory
-              rowwisenorm::plot_results(lowest_level_norm, exp_design, output_dir = mytemp, show_labels = show_lab, svg = make_svg)
+              rowwisenorm::plot_results(lowest_level_norm, exp_design, output_dir = mytemp,
+                                        show_labels = show_lab, svg = make_svg,
+                                        set_colors = pca_colors, set_symbols = pca_symbols)  # set colors and symbols
               Sys.sleep(0.5)
 
               setwd(mytemp)
@@ -916,7 +935,8 @@ server <- function(input, output, session) {
         output$plot4_raw <- renderPlot({
           # show labels parameter
           if (input$show_labels_raw) show_lab <- T else show_lab <- F
-          rowwisenorm::pcaPlot2(lowest_level_df_raw, exp_design, show_labels = show_lab)
+          rowwisenorm::pcaPlot2(lowest_level_df_raw, exp_design, show_labels = show_lab,
+                                set_colors = pca_colors, set_symbols = pca_symbols)  # set colors and symbols
         })
       }
     })
@@ -937,7 +957,8 @@ server <- function(input, output, session) {
         output$plot4_raw_pre <- renderPlot({
           # show labels parameter
           if (input$show_labels_raw_pre) show_lab <- T else show_lab <- F
-          rowwisenorm::pcaPlot2(lowest_level_df_pre, exp_design, show_labels = show_lab)
+          rowwisenorm::pcaPlot2(lowest_level_df_pre, exp_design, show_labels = show_lab,
+                                set_colors = pca_colors, set_symbols = pca_symbols)  # set colors and symbols
         })
       }
     })
@@ -958,7 +979,8 @@ server <- function(input, output, session) {
         output$plot4_norm <- renderPlot({
           # show labels parameter
           if (input$show_labels_norm) show_lab <- T else show_lab <- F
-          rowwisenorm::pcaPlot2(lowest_level_norm, exp_design, show_labels = show_lab)
+          rowwisenorm::pcaPlot2(lowest_level_norm, exp_design, show_labels = show_lab,
+                                set_colors = pca_colors, set_symbols = pca_symbols)  # set colors and symbols
         })
       }
     })
