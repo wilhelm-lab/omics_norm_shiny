@@ -121,7 +121,7 @@ ui <- fluidPage(
 
                         # filtering of features - only show a checkbox if feature is available in data
                         textOutput("feature_note"),
-                        actionButton("generate_features", "Find Features"),
+                        actionButton("generate_features", "Find Features", icon = icon("refresh")),
                         # status output with space above
                         uiOutput("generate_features_status", style = "margin-top: 20px;"),
 
@@ -308,6 +308,8 @@ ui <- fluidPage(
                         # svg parameter
                         checkboxInput(inputId = "svg", label = "Additionally create SVG files", value = FALSE),
 
+                        # title for plots when downloading with button
+                        textInput("download_plots_title", "Optionally: Set a title for the plots:"),
 
                         # download button for PDF (and svg) raw
                         downloadButton("download_pdf_raw", "Download Plots Raw Data"),
@@ -321,7 +323,7 @@ ui <- fluidPage(
 
                         conditionalPanel(
                           condition = "input.save_plots_raw == true",
-                          textInput(inputId = "filename_raw", label = "Optionally: Your desired file name:"),
+                          textInput(inputId = "filename_raw", label = "Optionally: Your desired file name and plot title:"),
                           textInput(inputId = "dir_raw", label = "Optionally: Your desired directory path:", placeholder = "current working directory"),
                           actionButton(inputId = "save_pdf_raw", label = "Submit"),
                           verbatimTextOutput("pdf_path_raw")
@@ -333,7 +335,7 @@ ui <- fluidPage(
 
                         conditionalPanel(
                           condition = "input.save_plots_norm == true",
-                          textInput(inputId = "filename_norm", label = "Optionally: Your desired file name:"),
+                          textInput(inputId = "filename_norm", label = "Optionally: Your desired file name and plot title:"),
                           textInput(inputId = "dir_norm", label = "Optionally: Your desired directory path:", placeholder = "current working directory"),
                           actionButton(inputId = "save_pdf_norm", label = "Submit"),
                           verbatimTextOutput("pdf_path_norm")
@@ -458,6 +460,10 @@ server <- function(input, output, session) {
       available_features(NULL)
       # clear status message of feature filtering
       output$generate_features_status <- renderUI({
+        HTML('')
+      })
+      # clear status message of process button
+      output$process_status <- renderUI({
         HTML('')
       })
     })
@@ -868,11 +874,16 @@ server <- function(input, output, session) {
     # download PDFs
     output$download_pdf_raw <- downloadHandler(
       filename = function(){
+        if (trimws(input$download_plots_title) == ""){
+          f <- "results"
+        } else {
+          f <- trimws(input$download_plots_title)
+        }
         if (input$svg){
-          "results.zip"
+          paste(f, "zip", sep = ".")
         }
         else {
-          "results.pdf"
+          paste(f, "pdf", sep = ".")
         }
       },
       content = function(file) {
@@ -897,23 +908,31 @@ server <- function(input, output, session) {
                 dir.create(mytemp)
 
                 # Generate the PDF and SVG files in the temporary directory
-                rowwisenorm::plot_results(lowest_level_df, exp_design, output_dir = mytemp,
-                                          show_labels = show_lab, svg = make_svg,
+                rowwisenorm::plot_results(lowest_level_df, exp_design, main = input$download_plots_title,
+                                          output_dir = mytemp, show_labels = show_lab, svg = make_svg,
                                           set_colors = pca_colors, set_symbols = pca_symbols)  # set colors and symbols
                 Sys.sleep(0.5)
 
                 setwd(mytemp)
 
+                if (trimws(input$download_plots_title) == ""){
+                  f <- "results"
+                } else {
+                  f <- trimws(input$download_plots_title)
+                }
+
                 if (make_svg){
                   # make zip of the files inside temporary directory
-                  zip_file <- "results.zip"
-                  zip(zip_file, files = c("results.pdf", "results01.svg", "results02.svg", "results03.svg", "results04.svg"))
+                  zip_file <- paste(f, "zip", sep = ".")
+                  zip(zip_file, files = c(paste(f, "pdf", sep = "."), paste(f, "01.svg", sep = ""),
+                                          paste(f, "02.svg", sep = ""), paste(f, "03.svg", sep = ""),
+                                          paste(f, "04.svg", sep = "")))
 
                   # Move the ZIP archive to the chosen location
                   file.rename(zip_file, file)
                 }
                 else {
-                  file.rename("results.pdf", file)
+                  file.rename(paste(f, "pdf", sep = "."), file)
                 }
 
                 setwd(original_working_directory)  # set back to original working directory
@@ -929,11 +948,16 @@ server <- function(input, output, session) {
 
     output$download_pdf_norm <- downloadHandler(
       filename = function(){
+        if (trimws(input$download_plots_title) == ""){
+          f <- "results"
+        } else {
+          f <- trimws(input$download_plots_title)
+        }
         if (input$svg){
-          "results.zip"
+          paste(f, "zip", sep = ".")
         }
         else {
-          "results.pdf"
+          paste(f, "pdf", sep = ".")
         }
       },
       content = function(file) {
@@ -958,23 +982,31 @@ server <- function(input, output, session) {
               dir.create(mytemp)
 
               # Generate the PDF and SVG files in the temporary directory
-              rowwisenorm::plot_results(lowest_level_norm, exp_design, output_dir = mytemp,
-                                        show_labels = show_lab, svg = make_svg,
+              rowwisenorm::plot_results(lowest_level_norm, exp_design, main = input$download_plots_title,
+                                        output_dir = mytemp, show_labels = show_lab, svg = make_svg,
                                         set_colors = pca_colors, set_symbols = pca_symbols)  # set colors and symbols
               Sys.sleep(0.5)
 
               setwd(mytemp)
 
+              if (trimws(input$download_plots_title) == ""){
+                f <- "results"
+              } else {
+                f <- trimws(input$download_plots_title)
+              }
+
               if (make_svg){
                 # make zip of the files inside temporary directory
-                zip_file <- "results.zip"
-                zip(zip_file, files = c("results.pdf", "results01.svg", "results02.svg", "results03.svg", "results04.svg"))
+                zip_file <- paste(f, "zip", sep = ".")
+                zip(zip_file, files = c(paste(f, "pdf", sep = "."), paste(f, "01.svg", sep = ""),
+                                        paste(f, "02.svg", sep = ""), paste(f, "03.svg", sep = ""),
+                                        paste(f, "04.svg", sep = "")))
 
                 # Move the ZIP archive to the chosen location
                 file.rename(zip_file, file)
               }
               else {
-                file.rename("results.pdf", file)
+                file.rename(paste(f, "pdf", sep = "."), file)
               }
 
               setwd(original_working_directory)  # set back to original working directory
