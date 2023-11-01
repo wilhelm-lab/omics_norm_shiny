@@ -28,9 +28,12 @@ ui <- fluidPage(
 
     # Application title
     titlePanel(
-      h2("Normalize Your Data", align="center",
+      h2("Proteomics Data Normalization", align="center",
          style="font-family: Garamond; font-size: 35px; font-weight:350; color:darkblue;"), windowTitle = "Normalize Your Data"
     ),
+    # alternatives: Normalize Your Data,
+    # Exploring Proteomics Data Normalization
+    # Comparative Toolkit of Normalization Methods for Proteomics
     # text-shadow: 2px 2px 4px blue;
 
     # graphic adjustment
@@ -44,6 +47,11 @@ ui <- fluidPage(
     tags$head(tags$style("#reading_error{color: red;}")),
     tags$head(tags$style("#normalize_row_warning{color: red;}")),
 
+    # color and thickness of lines subtitles
+    tags$style(HTML(".title-hr {
+      background-color: rgba(0, 0, 139, 0.5); /* Transparent dark blue color */
+      height: 1.3px; /* Adjust thickness here */
+    }")),
 
     # part the ui in three parts
     tabsetPanel(
@@ -84,10 +92,10 @@ ui <- fluidPage(
                  # left
                  column(4,
                         div(
-                          h3("Data", style = "font-size: 20px; font-weight:750;"),
+                          h3("Data", style = "font-size: 20px; font-weight:750; color: darkblue;"),
                           class = "title-div"
                         ),
-                        hr(),  # horizontal line
+                        hr(class = "title-hr"),  # horizontal line
 
                         # upload files
                         fileInput(inputId = "data", label = "Upload your data",
@@ -101,9 +109,14 @@ ui <- fluidPage(
                        ),
                  # middle
                  column(4,
+                        div(
+                          h3("Settings", style = "font-size: 20px; font-weight:750; color: darkblue;"),
+                          class = "title-div"
+                        ),
+                        hr(class = "title-hr"),
                         # choose method
                         div(
-                          h3("Normalization Method", style = "font-size: 20px; font-weight:750;"),
+                          h3("Normalization Method", style = "font-size: 17px; font-weight:550;"),
                           class = "title-div"
                         ),
                         hr(),
@@ -114,14 +127,14 @@ ui <- fluidPage(
                         textOutput("selected_method"),
                         # Preprocessing possible for all methods: - but log2 not for VST allowed (no negative values allowed)
                         div(
-                          h3("Preprocessing", style = "font-size: 20px; font-weight:750;"),
+                          h3("Preprocessing", style = "font-size: 17px; font-weight:550;"),
                           class = "title-div"
                         ),
                         hr(),  # horizontal line
 
                         # filtering of features - only show a checkbox if feature is available in data
                         textOutput("feature_note"),
-                        actionButton("generate_features", "Find Features", icon = icon("refresh")),
+                        actionButton("generate_features", "Find Features", icon = icon("search")),
                         # status output with space above
                         uiOutput("generate_features_status", style = "margin-top: 20px;"),
 
@@ -174,7 +187,7 @@ ui <- fluidPage(
 
                         ### Setups for specific methods:
                         div(
-                          h3("Setups", style = "font-size: 20px; font-weight:750;"),
+                          h3("Method-Specific Setups", style = "font-size: 17px; font-weight:550;"),
                           class = "title-div"
                         ),
                         hr(),  # horizontal line
@@ -223,10 +236,10 @@ ui <- fluidPage(
                  column(4,
                         # process button
                         div(
-                          h2("Start calculation", style = "font-size: 20px; font-weight:750;"),
+                          h2("Start calculation", style = "font-size: 20px; font-weight:750; color: darkblue;"),
                           class = "title-div"
                         ),
-                        hr(),
+                        hr(class = "title-hr"),
                         textOutput("process_note"),
                         actionButton("process", label = "Process", icon = icon("refresh")),
 
@@ -235,7 +248,7 @@ ui <- fluidPage(
 
                         # Notifications (warning and error messages)
                         div(
-                          h2("Notifications", style = "font-size: 18px; font-weight:550; color:darkblue"),
+                          h2("Notifications", style = "font-size: 17px; font-weight:550; color:darkblue"),
                           class = "title-div"
                         ),
                         tags$hr(style="border-color: darkblue;"),  # horizontal line
@@ -255,10 +268,10 @@ ui <- fluidPage(
                  column(6,
                         # show normalized data
                         div(
-                          h3("Values of Normalized Data", style = "font-size: 20px; font-weight:750;"),
+                          h3("Values of Normalized Data", style = "font-size: 20px; font-weight:750; color: darkblue;"),
                           class = "title-div"
                         ),
-                        hr(),  # horizontal line
+                        hr(class = "title-hr"),  # horizontal line
 
                         # button for showing data
                         actionButton(inputId = "show_data", label = "Show normalized data"),
@@ -271,10 +284,10 @@ ui <- fluidPage(
                  column(6,
                         # download
                         div(
-                          h3("Write Into File", style = "font-size: 20px; font-weight:750;"),
+                          h3("Write Into File", style = "font-size: 20px; font-weight:750; color: darkblue;"),
                           class = "title-div"
                         ),
-                        hr(),  # horizontal line
+                        hr(class = "title-hr"),  # horizontal line
 
                         # download button for outfile lowest-level
                         downloadButton("download_outfile", "Download Data on Lowest Level"),
@@ -297,10 +310,10 @@ ui <- fluidPage(
                         ),
 
                         div(
-                          h3("Download Plots", style = "font-size: 20px; font-weight:750;"),
+                          h3("Download Plots", style = "font-size: 20px; font-weight:750; color: darkblue;"),
                           class = "title-div"
                         ),
-                        hr(),  # horizontal line
+                        hr(class = "title-hr"),  # horizontal line
 
                         # show labels parameter for PCA labels
                         checkboxInput(inputId = "show_labels", label = "Show labels inside PCA plot", value = FALSE),
@@ -352,10 +365,10 @@ ui <- fluidPage(
                  # left - raw
                  column(4,
                         div(
-                          h3("Plots of Raw Data", style = "font-size: 20px; font-weight:750;"),
+                          h3("Plots of Raw Data", style = "font-size: 20px; font-weight:750; color: darkblue;"),
                           class = "title-div"
                         ),
-                        hr(),  # horizontal line
+                        hr(class = "title-hr"),  # horizontal line
 
                         # show labels parameter for PCA labels
                         checkboxInput(inputId = "show_labels_raw", label = "Show labels inside PCA plot", value = FALSE),
@@ -371,10 +384,10 @@ ui <- fluidPage(
                  # middle - raw pre-processed
                  column(4,
                         div(
-                          h3("Plots of Raw Data Pre-Processed", style = "font-size: 20px; font-weight:750;"),
+                          h3("Plots of Raw Data Pre-Processed", style = "font-size: 20px; font-weight:750; color: darkblue;"),
                           class = "title-div"
                         ),
-                        hr(),  # horizontal line
+                        hr(class = "title-hr"),  # horizontal line
 
                         # show labels parameter for PCA labels
                         checkboxInput(inputId = "show_labels_raw_pre", label = "Show labels inside PCA plot", value = FALSE),
@@ -390,10 +403,10 @@ ui <- fluidPage(
                  # right - normalized
                  column(4,
                         div(
-                          h3("Plots of Normalized Data", style = "font-size: 20px; font-weight:750;"),
+                          h3("Plots of Normalized Data", style = "font-size: 20px; font-weight:750; color: darkblue;"),
                           class = "title-div"
                         ),
-                        hr(),  # horizontal line
+                        hr(class = "title-hr"),  # horizontal line
 
                         # show labels parameter for PCA labels
                         checkboxInput(inputId = "show_labels_norm", label = "Show labels inside PCA plot", value = FALSE),
@@ -874,6 +887,7 @@ server <- function(input, output, session) {
     # download PDFs
     output$download_pdf_raw <- downloadHandler(
       filename = function(){
+        # handle file name for default case and when a title was set
         if (trimws(input$download_plots_title) == ""){
           f <- "results"
         } else {
@@ -915,6 +929,7 @@ server <- function(input, output, session) {
 
                 setwd(mytemp)
 
+                # handle file name
                 if (trimws(input$download_plots_title) == ""){
                   f <- "results"
                 } else {
@@ -948,6 +963,7 @@ server <- function(input, output, session) {
 
     output$download_pdf_norm <- downloadHandler(
       filename = function(){
+        # handle file name for default case and when a title was set
         if (trimws(input$download_plots_title) == ""){
           f <- "results"
         } else {
@@ -989,6 +1005,7 @@ server <- function(input, output, session) {
 
               setwd(mytemp)
 
+              # handle file name
               if (trimws(input$download_plots_title) == ""){
                 f <- "results"
               } else {
