@@ -17,6 +17,8 @@ library(edgeR)  # for VST
 library(lumi)  # for VSN
 library(preprocessCore)  # for Quantile normalization
 
+library(shinyjs)
+
 # setting upload size to 100 MB max
 options(shiny.maxRequestSize=100*1024^2)
 
@@ -52,7 +54,7 @@ ui <- fluidPage(
                  style = "margin-top: 10px;", # Add margin to the top of the fluidRow
                  column(4, align = "center",
                         div(
-                          style = "border: 2px solid black; border-radius: 50%; width: 50px; height: 50px; display: flex; justify-content: center; align-items: center; background-color: rgba(0, 0, 139, 0.5);",
+                          style = "border: 2px solid black; border-radius: 50%; width: 50px; height: 50px; display: flex; justify-content: center; align-items: center; background-color: rgba(0, 0, 139, 0.4);",
                           h2(
                             "1",
                             style = "line-height: 50px; margin: 0; color: white;"
@@ -61,7 +63,7 @@ ui <- fluidPage(
                  ),  # First column with the number 1 inside a round circle
                  column(4, align = "center",
                         div(
-                          style = "border: 2px solid black; border-radius: 50%; width: 50px; height: 50px; display: flex; justify-content: center; align-items: center; background-color: rgba(0, 0, 139, 0.5);",
+                          style = "border: 2px solid black; border-radius: 50%; width: 50px; height: 50px; display: flex; justify-content: center; align-items: center; background-color: rgba(0, 0, 139, 0.4);",
                           h2(
                             "2",
                             style = "line-height: 50px; margin: 0; color: white;"
@@ -70,7 +72,7 @@ ui <- fluidPage(
                  ),  # Second column with the number 2 inside a round circle
                  column(4, align = "center",
                         div(
-                          style = "border: 2px solid black; border-radius: 50%; width: 50px; height: 50px; display: flex; justify-content: center; align-items: center; background-color: rgba(0, 0, 139, 0.5);",
+                          style = "border: 2px solid black; border-radius: 50%; width: 50px; height: 50px; display: flex; justify-content: center; align-items: center; background-color: rgba(0, 0, 139, 0.4);",
                           h2(
                             "3",
                             style = "line-height: 50px; margin: 0; color: white;"
@@ -118,16 +120,17 @@ ui <- fluidPage(
                         hr(),  # horizontal line
 
                         # filtering of features - only show a checkbox if feature is available in data
+                        textOutput("feature_note"),
+                        actionButton("generate_features", "Find Features"),
+                        # status output with space above
+                        uiOutput("generate_features_status", style = "margin-top: 20px;"),
+
                         uiOutput("feature_text"),
                         uiOutput("onlyBySiteCheckbox"),
                         uiOutput("reverseCheckbox"),
                         uiOutput("contaminantCheckbox"),
                         hr(),
 
-                        # old version filtering of reverse, only by site, contaminant
-                        # selectInput(inputId = "filter", label = "Choose which features should be filtered out",
-                        #             choices = c("only by site" = "only by site", "reverse" = "reverse",
-                        #                         "contaminant" = "contaminant"), multiple = TRUE),
 
                         # log2
                         conditionalPanel(
@@ -430,10 +433,12 @@ server <- function(input, output, session) {
       "Click the button to load the data and perform normalization."
     })
 
-    # update possible feature filtering choices depending on data, whenever a file is uploaded - until #*
+    output$feature_note <- renderText({
+      "Click the button to search for features that can be filtered."
+    })
 
-    # important: later called to get completely raw data frame (without any feature filtering done)
-    uploaded_data <- reactive({
+    # important: called to get completely raw data frame (without any feature filtering done)
+    uploaded_data <- function(){
       req(input$data)
       inFile <- input$data
       ext <- tools::file_ext(inFile$name)
@@ -443,7 +448,7 @@ server <- function(input, output, session) {
         df <- read.table(inFile$datapath, header = TRUE, sep = "\t", stringsAsFactors = FALSE)
       }
       return(df)
-    })
+    }
 
     # Reactive value to store available features
     available_features <- reactiveVal(NULL)
@@ -451,14 +456,23 @@ server <- function(input, output, session) {
     # Clear the available features when a new file is uploaded
     observeEvent(input$data, {
       available_features(NULL)
+      # clear status message of feature filtering
+      output$generate_features_status <- renderUI({
+        HTML('')
+      })
     })
 
-    observe({
-      df <- uploaded_data()
+    # when button to search for features is clicked
+    observeEvent(input$generate_features, {
+      # clear status message
+      output$generate_features_status <- renderUI({
+        HTML('')
+      })
 
       # Get available features for the current data
       features <- c("only by site", "reverse", "contaminant")
       available_features_data <- character(0)
+      df <- uploaded_data()  # currently uploaded data
 
       for (feat in features) {
         regex_pattern <- gsub("\\s+", ".*", feat)
@@ -471,6 +485,11 @@ server <- function(input, output, session) {
       # Update the available features using the reactiveVal
       available_features(available_features_data)
 
+      # status message
+      generate_features_status <- renderUI({
+        HTML('<i class="fa fa-check-circle" style="color: green;"></i> Search completed')
+      })
+      output$generate_features_status <- generate_features_status
     })
 
     # when at least one feature is present, print title for feature filtering
@@ -487,7 +506,11 @@ server <- function(input, output, session) {
       if ("only by site" %in% available_features()) {
         checkboxInput("onlyBySite", "Only by Site", value = FALSE)
       } else {
-        NULL
+        # set value first to false, then remove checkbox
+        tagList(
+          checkboxInput("onlyBySite", "Only by Site", value = FALSE),
+          tags$script(HTML("$(document).ready(function() { $('input#onlyBySite').parent().hide(); });"))
+        )
       }
     })
 
@@ -495,7 +518,11 @@ server <- function(input, output, session) {
       if ("reverse" %in% available_features()) {
         checkboxInput("reverse", "Reverse", value = FALSE)
       } else {
-        NULL
+        # set value first to false, then remove checkbox
+        tagList(
+          checkboxInput("reverse", "Reverse", value = FALSE),
+          tags$script(HTML("$(document).ready(function() { $('input#reverse').parent().hide(); });"))
+        )
       }
     })
 
@@ -503,7 +530,11 @@ server <- function(input, output, session) {
       if ("contaminant" %in% available_features()) {
         checkboxInput("contaminant", "Contaminant", value = FALSE)
       } else {
-        NULL
+        # set value first to false, then remove checkbox
+        tagList(
+          checkboxInput("contaminant", "Contaminant", value = FALSE),
+          tags$script(HTML("$(document).ready(function() { $('input#contaminant').parent().hide(); });"))
+        )
       }
     })
 
