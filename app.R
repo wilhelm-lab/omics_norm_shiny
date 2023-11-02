@@ -59,6 +59,35 @@ ui <- fluidPage(
       height: 1.3px; /* Adjust thickness here */
     }")),
 
+    # background
+    tags$style(HTML('
+      body {
+        background: linear-gradient(135deg, rgba(135, 206, 235, 0.3), rgba(0, 191, 255, 0.6), rgba(30, 144, 255, 0.6), rgba(173, 216, 230, 0.6), rgba(135, 206, 235, 0.4));
+        background-size: 200% 200%; /* Increase the size to make the background fit the whole window */
+      }
+    ')),
+    # blue washing:  background: linear-gradient(135deg, rgba(135, 206, 235, 0), rgba(0, 191, 255, 0.6), rgba(30, 144, 255, 0.6), rgba(173, 216, 230, 0.6), rgba(135, 206, 235, 0.6));
+    # background: #e0e0ff; /* Light lavender */
+    # background: linear-gradient(to bottom, #e0e0ff, #f5f5f5); /* Gradient from light lavender to light gray */
+    # rainbow:     background: linear-gradient(135deg, #E0E0FF, #FFCCCC, #FF99CC, #FFCC99, #FFFF99, #CCFF99, #99FFCC, #99CCFF, #E0E0FF);
+    # flow:
+    #' tags$style(HTML('
+    #'   body {
+    #'     background: linear-gradient(135deg, #E0E0FF, #FFCCCC, #FF99CC, #FFCC99, #FFFF99, #CCFF99, #99FFCC, #99CCFF, #E0E0FF);
+    #'     background-size: 200% 200%; /* Increase the size to control the repeat */
+    #'     animation: gradient-flow 10s linear infinite; /* Add animation to make it flow */
+    #'   }
+    #'
+    #'   @keyframes gradient-flow {
+    #'     0% {
+    #'       background-position: 0% 0%;
+    #'     }
+    #'     100% {
+    #'       background-position: 100% 100%;
+    #'     }
+    #'   }
+    #' ')),
+
     # part the ui in three parts
     tabsetPanel(
       # left tab
@@ -250,7 +279,7 @@ ui <- fluidPage(
                         actionButton("process", label = "Process", icon = icon("refresh")),
 
                         # status output with space above
-                        uiOutput("process_status", style = "margin-top: 20px;"),
+                        uiOutput("process_status", style = "margin-top: 20px; font-size:15px"),
 
                         # Notifications (warning and error messages)
                         div(
@@ -403,10 +432,14 @@ ui <- fluidPage(
 
                         # button for showing plots raw data
                         actionButton(inputId = "show_plots_raw", label = "Show plots of raw data"),
+                        br(),
 
-                        plotOutput("plot1_raw"),  # set width = "0px", height = "0px" to avoid space to be reserved
-                        plotOutput("plot2_raw"),  # ... then would later need at renderPlot again plotOutput
+                        plotOutput("plot1_raw"),
+                        br(),
+                        plotOutput("plot2_raw"),
+                        br(),
                         plotOutput("plot3_raw"),
+                        br(),
                         plotOutput("plot4_raw"),
                         ),
                  # middle - raw pre-processed
@@ -422,10 +455,14 @@ ui <- fluidPage(
 
                         # button for showing plots raw data pre-processed
                         actionButton(inputId = "show_plots_raw_pre", label = "Show plots of raw data pre-processed"),
+                        br(),
 
                         plotOutput("plot1_raw_pre"),
+                        br(),
                         plotOutput("plot2_raw_pre"),
+                        br(),
                         plotOutput("plot3_raw_pre"),
+                        br(),
                         plotOutput("plot4_raw_pre"),
                         ),
                  # right - normalized
@@ -441,10 +478,14 @@ ui <- fluidPage(
 
                         # button for showing plots normalized
                         actionButton(inputId = "show_plots_norm", label = "Show plots of normalized data"),
+                        br(),
 
                         plotOutput("plot1_norm"),
+                        br(),
                         plotOutput("plot2_norm"),
+                        br(),
                         plotOutput("plot3_norm"),
+                        br(),
                         plotOutput("plot4_norm"),
                         ),
 
@@ -621,10 +662,10 @@ server <- function(input, output, session) {
                                                rm_only_by_site = boolean_only_by_site, rm_reverse = boolean_reverse,
                                                rm_contaminant = boolean_contaminant)
         return(return_list)
-      }, warning = function(w) {  # print first warning
+      }, warning = function(w) {  # print warning (should never happen with feature search)
         output$reading_warning <- renderText({
-          paste(w$message, " - Attention: Some other feature may also not have been found.")
-        })  # TODO maybe loop over warnings
+          paste(w$message)
+        })
         return(return_list)
       }, error = function(e) {  # when reading sanity check fails
         output$reading_error <- renderText({
@@ -1179,7 +1220,7 @@ server <- function(input, output, session) {
           rowwisenorm::plot_correlations(lowest_level_df_raw)
         })
         output$plot2_raw <- renderPlot({
-          rowwisenorm::plot_heatmap(lowest_level_df_raw)
+          rowwisenorm::plot_heatmap(lowest_level_df_raw, exp_design, batch_colors = pca_colors)
         })
         output$plot3_raw <- renderPlot({
           rowwisenorm::pcaPlot(lowest_level_df_raw)
@@ -1201,7 +1242,7 @@ server <- function(input, output, session) {
           rowwisenorm::plot_correlations(lowest_level_df_pre)
         })
         output$plot2_raw_pre <- renderPlot({
-          rowwisenorm::plot_heatmap(lowest_level_df_pre)
+          rowwisenorm::plot_heatmap(lowest_level_df_pre, exp_design, batch_colors = pca_colors)
         })
         output$plot3_raw_pre <- renderPlot({
           rowwisenorm::pcaPlot(lowest_level_df_pre)
@@ -1223,7 +1264,7 @@ server <- function(input, output, session) {
           rowwisenorm::plot_correlations(lowest_level_norm)
         })
         output$plot2_norm <- renderPlot({
-          rowwisenorm::plot_heatmap(lowest_level_norm)
+          rowwisenorm::plot_heatmap(lowest_level_norm, exp_design, batch_colors = pca_colors)
         })
         output$plot3_norm <- renderPlot({
           rowwisenorm::pcaPlot(lowest_level_norm)
