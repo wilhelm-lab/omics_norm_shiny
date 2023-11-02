@@ -9,6 +9,10 @@
 
 # setwd("C:/Users/User/Documents/rowwisenorm_shiny")
 
+# command line argument: 'local' can be set to include manual download options
+# run in terminal: Rscript app.R local
+# -> open link, stop with ctrl c
+
 library(shiny)
 library(rowwisenorm)  # make available
 library(pheatmap)
@@ -26,9 +30,11 @@ options(shiny.maxRequestSize=100*1024^2)
 # Define UI for application that draws a histogram
 ui <- fluidPage(
 
+    useShinyjs(),  # used to handle command line parameter
+
     # Application title
     titlePanel(
-      h2("Proteomics Data Normalization", align="center",
+      h2("Omics Data Normalization", align="center",
          style="font-family: Garamond; font-size: 35px; font-weight:350; color:darkblue;"), windowTitle = "Normalize Your Data"
     ),
     # alternatives: Normalize Your Data,
@@ -295,18 +301,21 @@ ui <- fluidPage(
                         # download button for outfile with additional columns
                         downloadButton("download_outfile_comp", "Download Data Complete"),
 
-                        # download outfile - manually - could replace div(icon())) with just setting the label
-                        checkboxInput(inputId = "writeoutfile", div(icon("star"), "Manually: Download normalized data"), value = FALSE),
-                        textOutput("writeout"),
+                        # only for local mode: download outfile - manually
+                        div(
+                          id = "local-content-1",
+                          checkboxInput(inputId = "writeoutfile", div(icon("star"), "Manually: Download normalized data"), value = FALSE),
+                          textOutput("writeout"),
 
-                        conditionalPanel(
-                          condition = "input.writeoutfile == true",
-                          textInput(inputId = "filename_outfile", label = "Optionally: Your desired file name:"),
-                          textInput(inputId = "dir_outfile", label = "Optionally: Your desired directory path:", placeholder = "current working directory"),
-                          selectInput(inputId = "outfile_level", label = "Level of complexity",
-                                      choices = c("lowest-level" = "lowest-level", "all-columns" = "all-columns")),
-                          actionButton(inputId = "save_outfile", label = "Submit"),
-                          verbatimTextOutput("outfile_path")
+                          conditionalPanel(
+                            condition = "input.writeoutfile == true",
+                            textInput(inputId = "filename_outfile", label = "Optionally: Your desired file name:"),
+                            textInput(inputId = "dir_outfile", label = "Optionally: Your desired directory path:", placeholder = "current working directory"),
+                            selectInput(inputId = "outfile_level", label = "Level of complexity",
+                                        choices = c("lowest-level" = "lowest-level", "all-columns" = "all-columns")),
+                            actionButton(inputId = "save_outfile", label = "Submit"),
+                            verbatimTextOutput("outfile_path")
+                          ),
                         ),
 
                         div(
@@ -327,31 +336,50 @@ ui <- fluidPage(
                         # download button for PDF (and svg) raw
                         downloadButton("download_pdf_raw", "Download Plots Raw Data"),
 
+                        # download button for PDF (and svg) raw pre-processed
+                        downloadButton("download_pdf_raw_pre", "Download Plots Raw Data Pre-Processed"),
+
                         # download button for PDF (and svg) normalized
                         downloadButton("download_pdf_norm", "Download Plots Normalized Data"),
 
-                        # download plots raw - manually
-                        checkboxInput(inputId = "save_plots_raw", div(icon("star"), "Manually: Save plots for raw data"), value = FALSE),
-                        textOutput("saving_plots_raw"),
+                        # only for local mode: manual downloads
+                        div(
+                          id = "local-content-2",
+                          # download plots raw - manually
+                          checkboxInput(inputId = "save_plots_raw", div(icon("star"), "Manually: Save plots for raw data"), value = FALSE),
+                          textOutput("saving_plots_raw"),
 
-                        conditionalPanel(
-                          condition = "input.save_plots_raw == true",
-                          textInput(inputId = "filename_raw", label = "Optionally: Your desired file name and plot title:"),
-                          textInput(inputId = "dir_raw", label = "Optionally: Your desired directory path:", placeholder = "current working directory"),
-                          actionButton(inputId = "save_pdf_raw", label = "Submit"),
-                          verbatimTextOutput("pdf_path_raw")
-                        ),
+                          conditionalPanel(
+                            condition = "input.save_plots_raw == true",
+                            textInput(inputId = "filename_raw", label = "Optionally: Your desired file name and plot title:"),
+                            textInput(inputId = "dir_raw", label = "Optionally: Your desired directory path:", placeholder = "current working directory"),
+                            actionButton(inputId = "save_pdf_raw", label = "Submit"),
+                            verbatimTextOutput("pdf_path_raw")
+                          ),
 
-                        # download plots normalized - manually
-                        checkboxInput(inputId = "save_plots_norm", div(icon("star"), "Manually: Save plots for normalized data"), value = FALSE),
-                        textOutput("saving_plots_norm"),
+                          # download plots raw pre-processed - manually
+                          checkboxInput(inputId = "save_plots_raw_pre", div(icon("star"), "Manually: Save plots for raw data pre-processed"), value = FALSE),
+                          textOutput("saving_plots_raw_pre"),
 
-                        conditionalPanel(
-                          condition = "input.save_plots_norm == true",
-                          textInput(inputId = "filename_norm", label = "Optionally: Your desired file name and plot title:"),
-                          textInput(inputId = "dir_norm", label = "Optionally: Your desired directory path:", placeholder = "current working directory"),
-                          actionButton(inputId = "save_pdf_norm", label = "Submit"),
-                          verbatimTextOutput("pdf_path_norm")
+                          conditionalPanel(
+                            condition = "input.save_plots_raw_pre == true",
+                            textInput(inputId = "filename_raw_pre", label = "Optionally: Your desired file name and plot title:"),
+                            textInput(inputId = "dir_raw_pre", label = "Optionally: Your desired directory path:", placeholder = "current working directory"),
+                            actionButton(inputId = "save_pdf_raw_pre", label = "Submit"),
+                            verbatimTextOutput("pdf_path_raw_pre")
+                          ),
+
+                          # download plots normalized - manually
+                          checkboxInput(inputId = "save_plots_norm", div(icon("star"), "Manually: Save plots for normalized data"), value = FALSE),
+                          textOutput("saving_plots_norm"),
+
+                          conditionalPanel(
+                            condition = "input.save_plots_norm == true",
+                            textInput(inputId = "filename_norm", label = "Optionally: Your desired file name and plot title:"),
+                            textInput(inputId = "dir_norm", label = "Optionally: Your desired directory path:", placeholder = "current working directory"),
+                            actionButton(inputId = "save_pdf_norm", label = "Submit"),
+                            verbatimTextOutput("pdf_path_norm")
+                          ),
                         ),
 
                         )
@@ -429,6 +457,21 @@ ui <- fluidPage(
 
 # Define server logic required to draw a histogram
 server <- function(input, output, session) {
+
+    # command line argument: 'local' can be set to include manual download options
+    args <- commandArgs(trailingOnly = TRUE)
+    is_local <- "local" %in% args
+    is_local_reactive <- reactive(is_local)
+    # watch if local is set, if so, show the additional content
+    observe({
+      if (is_local_reactive()) {
+        shinyjs::show("local-content-1")  # Show content 1
+        shinyjs::show("local-content-2")  # Show content 2
+      } else {
+        shinyjs::hide("local-content-1")  # Hide content 1
+        shinyjs::hide("local-content-2")  # Hide content 2
+      }
+    })
 
     # initialize global variables - inside server makes them session specific
     lowest_level_df <- data.frame()  # data frame coming from reading function
@@ -676,11 +719,6 @@ server <- function(input, output, session) {
         # reduce to lowest level
         lowest_level_df_raw <<- lowest_level_df_raw[colnames(lowest_level_df_raw) %in% colnames(lowest_level_df)]
 
-        # print(head(lowest_level_df))
-        # print("= lowest raw")
-        # print(head(lowest_level_norm))
-        # print("= lowest before norm")
-
         # pre-processing (included in each normalization) and normalization
         if(input$method == "row-wise-normalization"){
           lowest_level_norm <<- normalize_rowwise(lowest_level_df, exp_design)
@@ -704,10 +742,6 @@ server <- function(input, output, session) {
         })
         output$process_status <- process_status
 
-        # print(head(lowest_level_norm))
-        # print("= lowest after norm")
-        # print(head(lowest_level_df))
-        # print("= lowest raw after norm")
       }
     })
 
@@ -838,26 +872,48 @@ server <- function(input, output, session) {
     # save PDF manually
     observeEvent(input$save_pdf_raw, {
       # only do when data was processed (data frame not empty)
-      if (nrow(lowest_level_df) != 0){
+      if (nrow(lowest_level_df_raw) != 0){
         # show labels parameter
         if (input$show_labels) show_lab <- T else show_lab <- F
 
         # svg parameter
         if (input$svg) make_svg <- T else make_svg <- F
 
-        rowwisenorm::plot_results(lowest_level_df = lowest_level_df, exp_design = exp_design,
-                                  main = input$filename_raw, output_dir = input$dir_raw,
+        rowwisenorm::plot_results(lowest_level_df = lowest_level_df_raw, exp_design = exp_design,
+                                  main = trimws(input$filename_raw), output_dir = trimws(input$dir_raw),
                                   show_labels = show_lab, svg = make_svg,
                                   set_colors = pca_colors, set_symbols = pca_symbols)  # set colors and symbols
 
         # output message stating where the file was saved
-        if (input$dir_raw != "")  dir_path <- input$dir_raw else dir_path <- "current working directory"
-        if (input$filename_raw != "") file_name <- paste(input$filename_raw, ".pdf", sep = "") else file_name <- "results.pdf"  # note: hard coded as stated in plot_results
+        if (trimws(input$dir_raw) != "")  dir_path <- trimws(input$dir_raw) else dir_path <- "current working directory"
+        if (trimws(input$filename_raw) != "") file_name <- paste(trimws(input$filename_raw), ".pdf", sep = "") else file_name <- "results.pdf"  # note: hard coded as stated in plot_results
         output$pdf_path_raw <- renderText({
           paste("PDF saved to ", dir_path, " with file name ", file_name)
         })
       }
+    })
 
+    observeEvent(input$save_pdf_raw_pre, {
+      # only do when data was processed (data frame not empty)
+      if (nrow(lowest_level_df_pre) != 0){
+        # show labels parameter
+        if (input$show_labels) show_lab <- T else show_lab <- F
+
+        # svg parameter
+        if (input$svg) make_svg <- T else make_svg <- F
+
+        rowwisenorm::plot_results(lowest_level_df = lowest_level_df_pre, exp_design = exp_design,
+                                  main = trimws(input$filename_raw_pre), output_dir = trimws(input$dir_raw_pre),
+                                  show_labels = show_lab, svg = make_svg,
+                                  set_colors = pca_colors, set_symbols = pca_symbols)  # set colors and symbols
+
+        # output message stating where the file was saved
+        if (trimws(input$dir_raw_pre) != "")  dir_path <- trimws(input$dir_raw_pre) else dir_path <- "current working directory"
+        if (trimws(input$filename_raw_pre) != "") file_name <- paste(trimws(input$filename_raw_pre), ".pdf", sep = "") else file_name <- "results.pdf"  # note: hard coded as stated in plot_results
+        output$pdf_path_raw <- renderText({
+          paste("PDF saved to ", dir_path, " with file name ", file_name)
+        })
+      }
     })
 
     observeEvent(input$save_pdf_norm, {
@@ -870,18 +926,17 @@ server <- function(input, output, session) {
         if (input$svg) make_svg <- T else make_svg <- F
 
         rowwisenorm::plot_results(lowest_level_df = lowest_level_norm, exp_design = exp_design,
-                                  main = input$filename_norm, output_dir = input$dir_norm,
+                                  main = trimws(input$filename_norm), output_dir = trimws(input$dir_norm),
                                   show_labels = show_lab, svg = make_svg,
                                   set_colors = pca_colors, set_symbols = pca_symbols)  # set colors and symbols
 
         # output message stating where the file was saved
-        if (input$dir_norm != "")  dir_path <- input$dir_norm else dir_path <- "current working directory"
-        if (input$filename_norm != "") file_name <- paste(input$filename_norm, ".pdf", sep = "") else file_name <- "results.pdf"  # note: hard coded as stated in plot_results
+        if (trimws(input$dir_norm) != "")  dir_path <- trimws(input$dir_norm) else dir_path <- "current working directory"
+        if (trimws(input$filename_norm) != "") file_name <- paste(trimws(input$filename_norm), ".pdf", sep = "") else file_name <- "results.pdf"  # note: hard coded as stated in plot_results
         output$pdf_path_norm <- renderText({
           paste("PDF saved to ", dir_path, " with file name ", file_name)
         })
       }
-
     })
 
     # download PDFs
@@ -922,7 +977,7 @@ server <- function(input, output, session) {
                 dir.create(mytemp)
 
                 # Generate the PDF and SVG files in the temporary directory
-                rowwisenorm::plot_results(lowest_level_df, exp_design, main = input$download_plots_title,
+                rowwisenorm::plot_results(lowest_level_df_raw, exp_design, main = input$download_plots_title,
                                           output_dir = mytemp, show_labels = show_lab, svg = make_svg,
                                           set_colors = pca_colors, set_symbols = pca_symbols)  # set colors and symbols
                 Sys.sleep(0.5)
@@ -955,6 +1010,83 @@ server <- function(input, output, session) {
                 # remove the temporary directory
                 unlink(mytemp, recursive = TRUE)
               }
+          )
+
+        }
+      }
+    )
+
+    # same but with pre-processed data
+    output$download_pdf_raw_pre <- downloadHandler(
+      filename = function(){
+        # handle file name for default case and when a title was set
+        if (trimws(input$download_plots_title) == ""){
+          f <- "results"
+        } else {
+          f <- trimws(input$download_plots_title)
+        }
+        if (input$svg){
+          paste(f, "zip", sep = ".")
+        }
+        else {
+          paste(f, "pdf", sep = ".")
+        }
+      },
+      content = function(file) {
+        # only do when data was processed (data frame not empty)
+        if (nrow(lowest_level_df) != 0){
+          # show labels parameter
+          if (input$show_labels) show_lab <- T else show_lab <- F
+
+          # svg parameter
+          if (input$svg) make_svg <- T else make_svg <- F
+
+          # Save file with a progress indicator (only to get progress message, also works to just generate and save)
+          withProgress(
+            message = 'Generating file(s)...',
+            detail = 'This may take a moment...',
+            value = 0, {
+
+              original_working_directory <- getwd()
+
+              # artificial temporary directory inside current working directory to save the files in the first place (otherwise files would be automatically saved in wd which could cause overwriting other files)
+              mytemp <- paste0("download_", format(Sys.time(), "%Y%m%d%H%M%S"), "_", sample(1:9999, 1))
+              dir.create(mytemp)
+
+              # Generate the PDF and SVG files in the temporary directory
+              rowwisenorm::plot_results(lowest_level_df_pre, exp_design, main = input$download_plots_title,
+                                        output_dir = mytemp, show_labels = show_lab, svg = make_svg,
+                                        set_colors = pca_colors, set_symbols = pca_symbols)  # set colors and symbols
+              Sys.sleep(0.5)
+
+              setwd(mytemp)
+
+              # handle file name
+              if (trimws(input$download_plots_title) == ""){
+                f <- "results"
+              } else {
+                f <- trimws(input$download_plots_title)
+              }
+
+              if (make_svg){
+                # make zip of the files inside temporary directory
+                zip_file <- paste(f, "zip", sep = ".")
+                zip(zip_file, files = c(paste(f, "pdf", sep = "."), paste(f, "01.svg", sep = ""),
+                                        paste(f, "02.svg", sep = ""), paste(f, "03.svg", sep = ""),
+                                        paste(f, "04.svg", sep = "")))
+
+                # Move the ZIP archive to the chosen location
+                file.rename(zip_file, file)
+              }
+              else {
+                file.rename(paste(f, "pdf", sep = "."), file)
+              }
+
+              setwd(original_working_directory)  # set back to original working directory
+
+              # remove the temporary directory
+              unlink(mytemp, recursive = TRUE)
+            }
           )
 
         }
