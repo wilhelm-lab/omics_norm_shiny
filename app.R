@@ -32,16 +32,6 @@ ui <- fluidPage(
 
     useShinyjs(),  # used to handle command line parameter
 
-    # Application title
-    titlePanel(
-      h2("Omics Data Normalization", align="center",
-         style="font-family: Garamond; font-size: 35px; font-weight:350; color:darkblue;"), windowTitle = "Normalize Your Data"
-    ),
-    # alternatives: Normalize Your Data,
-    # Exploring Proteomics Data Normalization
-    # Comparative Toolkit of Normalization Methods for Proteomics
-    # text-shadow: 2px 2px 4px blue;
-
     # graphic adjustment
     tags$head(
       tags$style(HTML("hr {border-top: 1px solid #000000;}")),  # horizontal line thicker
@@ -60,17 +50,89 @@ ui <- fluidPage(
     }")),
 
     # background
+    # tags$style(HTML('
+    #   body {
+    #     background: linear-gradient(135deg, rgba(135, 206, 235, 0.3), rgba(0, 191, 255, 0.6), rgba(30, 144, 255, 0.6), rgba(173, 216, 230, 0.6), rgba(135, 206, 235, 0.4));
+    #     background-size: 200% 200%; /* Increase the size to make the background fit the whole window */
+    #   }
+    # ')),
+    # bright grey, dark grey tabs:
+    # tags$style(HTML('
+    #   body {
+    #     background: #f5f5f5; /* Light gray background */
+    #   }
+    #   .navbar {
+    #     background: #ccc; /* Subtle accent color for the navigation bar */
+    #   }
+    #   .nav-tabs li a {
+    #     background: #ccc; /* Subtle accent color for tab headers */
+    #   }
+    #   .nav-tabs li.active a {
+    #     background: #bbb; /* Slightly darker accent for the active tab */
+    #   }
+    #   .column {  /* can be set as class ="column" into specific elements */
+    #     background: #e0e0e0; /* Light tint for column backgrounds */
+    #     border: 1px solid #ddd; /* Delicate gray border */
+    #   }
+    # ')),
+    # same green:
+    # tags$style(HTML('
+    #   body {
+    #     background: #e6ffcc; /* Very bright pastel green for the general background */
+    #   }
+    #   .navbar {
+    #     background: #ccff99; /* Slightly darker but still light green for the navigation bar */
+    #   }
+    #   .nav-tabs li a {
+    #     background: #ccff99; /* Slightly darker but still light green for tab headers */
+    #   }
+    #   .nav-tabs li.active a {
+    #     background: #aaff66; /* Slightly darker but still light green for the active tab */
+    #   }
+    #   .column {
+    #     background: #e0e0e0; /* Light tint for column backgrounds */
+    #     border: 1px solid #ddd; /* Delicate gray border */
+    #   }
+    # ')),
     tags$style(HTML('
       body {
-        background: linear-gradient(135deg, rgba(135, 206, 235, 0.3), rgba(0, 191, 255, 0.6), rgba(30, 144, 255, 0.6), rgba(173, 216, 230, 0.6), rgba(135, 206, 235, 0.4));
-        background-size: 200% 200%; /* Increase the size to make the background fit the whole window */
+      background: rgba(204, 229, 255, 0.7); /* Slightly darker but transparent blue for the general background */
+    }
+    .navbar {
+      background: #99ccff; /* Slightly darker but still light blue for the navigation bar */
+    }
+    .nav-tabs {
+      border-bottom: 2px solid #00008B; /* Darker and thicker border between tab bar and content */
+    }
+    .nav-tabs li a {
+      background: #99ccff; /* Slightly darker but still light blue for tab headers */
+    }
+    .nav-tabs li.active a {
+      background: #66aaff; /* Slightly darker but still light blue for the active tab */
+    }
+    table {
+      border: 2px solid #00008B; /* Dark blue border for the table */
+    }
+    th, td {
+      border: 1px solid #00008B; /* Dark blue border for table headers and data cells */
+    }
+    table thead th {
+      border: 1px solid #00008B; /* Dark blue border for lines between headers and data cells */
+    }
+    .fancy-title {  /* design for the title */
+        font-family: "Arial Black", Gadget, sans-serif; /* Custom font */
+        font-size: 30px; /* Custom font size */
+        color: #E5E8E8; /* Text color 00008B */
+        background-color: #284D8E; /* Background color 91E3DD */
+        padding: 10px 20px; /* Padding to style the title area */
+        border-radius: 8px; /* Rounded corners */
       }
+    .column {
+      background: #e0e0e0; /* Light tint for column backgrounds */
+      border: 1px solid #ddd; /* Delicate gray border */
+    }
     ')),
-    # blue washing:  background: linear-gradient(135deg, rgba(135, 206, 235, 0), rgba(0, 191, 255, 0.6), rgba(30, 144, 255, 0.6), rgba(173, 216, 230, 0.6), rgba(135, 206, 235, 0.6));
-    # background: #e0e0ff; /* Light lavender */
-    # background: linear-gradient(to bottom, #e0e0ff, #f5f5f5); /* Gradient from light lavender to light gray */
-    # rainbow:     background: linear-gradient(135deg, #E0E0FF, #FFCCCC, #FF99CC, #FFCC99, #FFFF99, #CCFF99, #99FFCC, #99CCFF, #E0E0FF);
-    # flow:
+    # flow rainbow background:
     #' tags$style(HTML('
     #'   body {
     #'     background: linear-gradient(135deg, #E0E0FF, #FFCCCC, #FF99CC, #FFCC99, #FFFF99, #CCFF99, #99FFCC, #99CCFF, #E0E0FF);
@@ -87,6 +149,17 @@ ui <- fluidPage(
     #'     }
     #'   }
     #' ')),
+
+    # Application title
+    titlePanel(
+      div(class = "fancy-title", "Omics Data Normalization")
+    ),
+
+    # alternatively:
+    # titlePanel(
+    #   h2("Omics Data Normalization", align="center",
+    #      style="font-family: Garamond; font-size: 35px; font-weight:350; color:darkblue;"), windowTitle = "Omics Data Normalization"
+    # ),
 
     # part the ui in three parts
     tabsetPanel(
