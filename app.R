@@ -96,41 +96,41 @@ ui <- fluidPage(
     # ')),
     tags$style(HTML('
       body {
-      background: rgba(204, 229, 255, 0.7); /* Slightly darker but transparent blue for the general background */
-    }
-    .navbar {
-      background: #99ccff; /* Slightly darker but still light blue for the navigation bar */
-    }
-    .nav-tabs {
-      border-bottom: 2px solid #00008B; /* Darker and thicker border between tab bar and content */
-    }
-    .nav-tabs li a {
-      background: #99ccff; /* Slightly darker but still light blue for tab headers */
-    }
-    .nav-tabs li.active a {
-      background: #66aaff; /* Slightly darker but still light blue for the active tab */
-    }
-    table {
-      border: 2px solid #00008B; /* Dark blue border for the table */
-    }
-    th, td {
-      border: 1px solid #00008B; /* Dark blue border for table headers and data cells */
-    }
-    table thead th {
-      border: 1px solid #00008B; /* Dark blue border for lines between headers and data cells */
-    }
-    .fancy-title {  /* design for the title */
-        font-family: "Arial Black", Gadget, sans-serif; /* Custom font */
-        font-size: 30px; /* Custom font size */
-        color: #E5E8E8; /* Text color 00008B */
-        background-color: #284D8E; /* Background color 91E3DD */
-        padding: 10px 20px; /* Padding to style the title area */
-        border-radius: 8px; /* Rounded corners */
+        background: rgba(204, 229, 255, 0.7); /* Blue transparent general background */
       }
-    .column {
-      background: #e0e0e0; /* Light tint for column backgrounds */
-      border: 1px solid #ddd; /* Delicate gray border */
-    }
+      .navbar {
+        background: #99ccff; /* Slightly darker but still light blue for the navigation bar */
+      }
+      .nav-tabs {
+        border-bottom: 2px solid #00008B; /* Darkblue thicker border between tab bar and content */
+      }
+      .nav-tabs li a {
+        background: #99ccff; /* tab headers */
+      }
+      .nav-tabs li.active a {
+        background: #66aaff; /* active tab */
+      }
+      table {
+        border: 2px solid #00008B; /* Dark blue border for the table */
+      }
+      th, td {
+        border: 1px solid #00008B; /* Dark blue border for table headers and data cells */
+      }
+      table thead th {
+        border: 1px solid #00008B; /* Dark blue border for lines between headers and data cells */
+      }
+      .fancy-title {  /* design for the title */
+          font-family: "Arial Black", Gadget, sans-serif; /* Custom font */
+          font-size: 30px; /* Custom font size */
+          color: #E5E8E8; /* Text color 00008B */
+          background-color: #284D8E; /* Background color 91E3DD */
+          padding: 10px 20px; /* Padding to style the title area */
+          border-radius: 8px; /* Rounded corners */
+        }
+      .column {
+        background: #e0e0e0; /* Light tint for column backgrounds */
+        border: 1px solid #ddd; /* Delicate gray border */
+      }
     ')),
     # flow rainbow background:
     #' tags$style(HTML('
