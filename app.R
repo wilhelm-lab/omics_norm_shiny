@@ -102,7 +102,7 @@ ui <- fluidPage(
         background: #99ccff; /* Slightly darker but still light blue for the navigation bar */
       }
       .nav-tabs {
-        border-bottom: 2px solid #00008B; /* Darkblue thicker border between tab bar and content */
+        border-bottom: 3px solid #66aaff; /* border between tab bar and content */
       }
       .nav-tabs li a {
         background: #99ccff; /* tab headers */
@@ -339,6 +339,18 @@ ui <- fluidPage(
                           # na.rm - use the same as for row-wise
                           # checkboxInput(inputId = "na_rm_sum", label = "Remove NA values", value = TRUE),
                         ),
+
+                        ### Graphical adjustment of batch colors inside plots
+                        div(
+                          h3("Plot Adjustment", style = "font-size: 17px; font-weight:550;"),
+                          class = "title-div"
+                        ),
+                        hr(),  # horizontal line
+                        selectInput("batch_colors_manually", "Optionally: Select colors to be used for the batches inside the PCA plot and the heatmap",
+                                    choices = colors(), multiple = TRUE),
+                        textOutput("batch_colors_manually_note"),
+                        br(),
+
                         ),
                  # right
                  column(4,
@@ -489,7 +501,7 @@ ui <- fluidPage(
 
              ),
       # right tab
-      tabPanel("Show Plots",
+      tabPanel("View Plots",
                fluidRow(
                  # note: both column widths as 6 instead 4 makes them fill the whole space of page, but plots have not correct height:width ratio then
                  # left - raw
@@ -636,6 +648,8 @@ server <- function(input, output, session) {
       output$process_status <- renderUI({
         HTML('')
       })
+      # clear note of the choice for batch colors
+      output$batch_colors_manually_note <- renderText({ })
     })
 
     # when button to search for features is clicked
@@ -825,8 +839,30 @@ server <- function(input, output, session) {
         exp_design <<- return_list[["exp_design"]]
         additional_cols <<- return_list[["additional_cols"]]
 
-        pca_colors <<- return_list[["pca_colors"]]
-        pca_symbols <<- return_list[["pca_symbols"]]
+        pca_colors <<- return_list[["pca_colors"]]  # used for batches in PCA and heatmap
+        pca_symbols <<- return_list[["pca_symbols"]]  # used for conditions in PCA
+
+        # change the batch colors in case enough colors were manually set by the user
+        batch_colors_manually_set <- input$batch_colors_manually
+        number_batches <- ncol(exp_design) -1
+        # when correct number of colors are manually set, take them
+        if (length(batch_colors_manually_set) == number_batches){
+          pca_colors <<- batch_colors_manually_set
+          output$batch_colors_manually_note <- renderText({ })  # empty the note
+        }
+        else if (length(batch_colors_manually_set) > number_batches){
+          # when more are set, take the first ones of them until they are enough
+          pca_colors <<- batch_colors_manually_set[1:number_batches]
+          output$batch_colors_manually_note <- renderText({
+            paste("There need to be ", number_batches, " colors set. The first ", number_batches,
+                  " colors are used.", sep = "")
+          })
+        }
+        else {  # else use the automatic generated colors
+          output$batch_colors_manually_note <- renderText({
+            paste("There need to be ", number_batches, " colors set. Automatically generated colors are used.")
+          })
+        }
 
         # completely raw data with all columns  (no ID column, raw is never needed but for plot comparison)
         lowest_level_df_raw <<- uploaded_data()
