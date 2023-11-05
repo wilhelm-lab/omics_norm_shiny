@@ -293,12 +293,15 @@ ui <- fluidPage(
                         checkboxInput(inputId = "median_norm", label = "Median normalize", value = FALSE),
 
 
-                        ### Setups for specific methods:
-                        div(
-                          h3("Method-Specific Setups", style = "font-size: 17px; font-weight:550;"),
-                          class = "title-div"
+                        ### Setups for specific methods: - only for row-wise and total sum
+                        conditionalPanel(
+                          condition = "input.method == 'row-wise-normalization' || input.method == 'total-sum' ",
+                          div(
+                            h3("Method-Specific Setups", style = "font-size: 17px; font-weight:550;"),
+                            class = "title-div"
+                          ),
+                          hr(),  # horizontal line
                         ),
-                        hr(),  # horizontal line
 
                         # active mode - only for row-wise
                         conditionalPanel(
@@ -820,6 +823,7 @@ server <- function(input, output, session) {
       output$process_status <- renderUI({
         HTML('')
       })
+      output$normalize_row_warning <- renderText({ })  # warning of normalize_row when no valid refs
       output$data_output <- renderUI({ })  # show data field
       output$plot1_raw <- renderUI({ })
       output$plot2_raw <- renderUI({ })
@@ -925,7 +929,7 @@ server <- function(input, output, session) {
                                                           na.rm = input$na_rm, refFunc = input$refFunc)
         }
         return(lowest_level_norm)
-      }, warning = function(w) {  # print warning
+      }, warning = function(w) {  # print warning (e.g. when no refs possible or non-possible refs entered)
         output$normalize_row_warning <- renderText({
           paste(w$message)
         })
