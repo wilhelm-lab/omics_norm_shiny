@@ -10,9 +10,9 @@ Rscript app.R
 
 Optional: The parameter 'local' can be added to obtain additional features inside the application.
 
-**Important:** This is only recommended in case the application is used locally.
-
 Terminal:
 ```
 Rscript app.R local 
 ```
+
+**Important:** This is only recommended in case the application is used locally.
