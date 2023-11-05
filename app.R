@@ -122,8 +122,8 @@ ui <- fluidPage(
       .fancy-title {  /* design for the title */
           font-family: "Arial Black", Gadget, sans-serif; /* Custom font */
           font-size: 30px; /* Custom font size */
-          color: #E5E8E8; /* Text color 00008B */
-          background-color: #284D8E; /* Background color 91E3DD */
+          color: #E5E8E8; /* Text color */
+          background-color: #284D8E; /* Background color */
           padding: 10px 20px; /* Padding to style the title area */
           border-radius: 8px; /* Rounded corners */
         }
@@ -167,34 +167,34 @@ ui <- fluidPage(
       tabPanel("Input and Settings",
                # fluid row for the numbers 1 to 3
                fluidRow(
-                 style = "margin-top: 10px;", # Add margin to the top of the fluidRow
+                 style = "margin-top: 10px;", # Add margin to the top of the fluidRow  #284D8E
                  column(4, align = "center",
                         div(
-                          style = "border: 2px solid black; border-radius: 50%; width: 50px; height: 50px; display: flex; justify-content: center; align-items: center; background-color: rgba(0, 0, 139, 0.4);",
+                          style = "border: 3px solid #284D8E; border-radius: 50%; width: 50px; height: 50px; display: flex; justify-content: center; align-items: center; background-color: rgba(0, 0, 139, 0.4);",
                           h2(
                             "1",
                             style = "line-height: 50px; margin: 0; color: white;"
                           )
                         )
-                 ),  # First column with the number 1 inside a round circle
+                 ),  # First column with the number 1 inside a circle
                  column(4, align = "center",
                         div(
-                          style = "border: 2px solid black; border-radius: 50%; width: 50px; height: 50px; display: flex; justify-content: center; align-items: center; background-color: rgba(0, 0, 139, 0.4);",
+                          style = "border: 3px solid #284D8E; border-radius: 50%; width: 50px; height: 50px; display: flex; justify-content: center; align-items: center; background-color: rgba(0, 0, 139, 0.4);",
                           h2(
                             "2",
                             style = "line-height: 50px; margin: 0; color: white;"
                           )
                         )
-                 ),  # Second column with the number 2 inside a round circle
+                 ),  # Second column with the number 2 inside a circle
                  column(4, align = "center",
                         div(
-                          style = "border: 2px solid black; border-radius: 50%; width: 50px; height: 50px; display: flex; justify-content: center; align-items: center; background-color: rgba(0, 0, 139, 0.4);",
+                          style = "border: 3px solid #284D8E; border-radius: 50%; width: 50px; height: 50px; display: flex; justify-content: center; align-items: center; background-color: rgba(0, 0, 139, 0.4);",
                           h2(
                             "3",
                             style = "line-height: 50px; margin: 0; color: white;"
                           )
                         )
-                 )  # Third column with the number 3 inside a round circle
+                 )  # Third column with the number 3 inside a circle
                ),
                fluidRow(
                  # left
