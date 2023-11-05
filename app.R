@@ -343,15 +343,22 @@ ui <- fluidPage(
                           # checkboxInput(inputId = "na_rm_sum", label = "Remove NA values", value = TRUE),
                         ),
 
-                        ### Graphical adjustment of batch colors inside plots
+                        ### Graphical adjustment
                         div(
                           h3("Plot Adjustment", style = "font-size: 17px; font-weight:550;"),
                           class = "title-div"
                         ),
-                        hr(),  # horizontal line
-                        selectInput("batch_colors_manually", "Optionally: Select colors to be used for the batches inside the PCA plot and the heatmap",
+                        hr(),
+                        # batch colors
+                        selectInput("batch_colors_manually", "Optionally: Select colors to be used for the batches inside the PCA plots and the heatmaps",
                                     choices = colors(), multiple = TRUE),
                         textOutput("batch_colors_manually_note"),
+                        br(),
+                        # condition symbols
+                        selectInput("condition_symbols_manually", "Optionally: Select symbols to be used for the conditions inside the PCA plots",
+                                    choices = 0:18, multiple = TRUE),
+                        textOutput("condition_symbols_manually_note"),
+                        plotOutput("pca_symbols_plot", height = "200px", width = "60%"),  # adjusted size
                         br(),
 
                         ),
@@ -625,6 +632,23 @@ server <- function(input, output, session) {
       "Click the button to search for features that can be filtered."
     })
 
+    plot_of_symbols <- function() {
+      original_Par <- par()
+      par(font = 2, mar = c(0.5, 0, 0, 0))
+      y = rev(c(rep(1, 4), rep(2, 5), rep(3, 5), rep(4, 5)))  # y values: 4 times 1, 5 times 2, 5 times 3, 5 times 4
+      x = c(rep(1:5, 4))  # x values: 4 times 1 2 3 4 5
+      pch_numbers <- 0:18
+      plot(x[1:length(pch_numbers)], y[1:length(pch_numbers)], pch = pch_numbers, cex = 1.5, ylim = c(1, 4.5), xlim = c(0.5, 5.5),
+           axes = FALSE, xlab = "", ylab = "")
+      text(x[1:length(pch_numbers)], y[1:length(pch_numbers)], labels = pch_numbers, pos = 3)
+      par(mar = original_Par$mar, font = original_Par$font)
+    }
+
+    # plot showing the symbols
+    output$pca_symbols_plot <- renderPlot({
+      plot_of_symbols()
+    })
+
     # important: called to get completely raw data frame (without any feature filtering done)
     uploaded_data <- function(){
       req(input$data)
@@ -866,6 +890,29 @@ server <- function(input, output, session) {
         else {  # else use the automatic generated colors
           output$batch_colors_manually_note <- renderText({
             paste("There need to be ", number_batches, " colors set. Automatically generated colors are used.")
+          })
+        }
+
+        # change the condition symbols the same way
+        condition_symbols_manually_set <- input$condition_symbols_manually
+        condition_symbols_manually_set <- as.numeric(condition_symbols_manually_set)  # important: make entry numeric
+        number_conds <- nrow(exp_design)
+        # when correct number of symbols are manually set, take them
+        if (length(condition_symbols_manually_set) == number_conds){
+          pca_symbols <<- condition_symbols_manually_set
+          output$condition_symbols_manually_note <- renderText({ })  # empty the note
+        }
+        else if (length(condition_symbols_manually_set) > number_conds){
+          # when more are set, take the first ones of them until they are enough
+          pca_symbols <<- condition_symbols_manually_set[1:number_conds]
+          output$condition_symbols_manually_note <- renderText({
+            paste("There need to be ", number_conds, " symbols set. The first ", number_conds,
+                  " symbols are used.", sep = "")
+          })
+        }
+        else {  # else use the automatic generated symbols
+          output$condition_symbols_manually_note <- renderText({
+            paste("There need to be ", number_conds, " symbols set. Automatically generated symbols are used.")
           })
         }
 
