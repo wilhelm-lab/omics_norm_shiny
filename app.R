@@ -395,6 +395,7 @@ ui <- fluidPage(
 
                         # button for showing data
                         actionButton(inputId = "show_data", label = "Show normalized data"),
+                        div(style = "height: 20px;"),  # Add 20px of space
 
                         # display data as a table, fill available space without overlapping right column
                         div(style = "max-width: 100%; overflow-x: auto;", tableOutput("data_output")),
@@ -517,7 +518,7 @@ ui <- fluidPage(
 
                         # button for showing plots raw data
                         actionButton(inputId = "show_plots_raw", label = "Show plots of raw data"),
-                        br(),
+                        div(style = "height: 20px;"),  # Add 20px of space
 
                         plotOutput("plot1_raw"),
                         br(),
@@ -540,7 +541,7 @@ ui <- fluidPage(
 
                         # button for showing plots raw data pre-processed
                         actionButton(inputId = "show_plots_raw_pre", label = "Show plots of raw data pre-processed"),
-                        br(),
+                        div(style = "height: 20px;"),  # Add 20px of space
 
                         plotOutput("plot1_raw_pre"),
                         br(),
@@ -563,7 +564,7 @@ ui <- fluidPage(
 
                         # button for showing plots normalized
                         actionButton(inputId = "show_plots_norm", label = "Show plots of normalized data"),
-                        br(),
+                        div(style = "height: 20px;"),  # Add 20px of space
 
                         plotOutput("plot1_norm"),
                         br(),
