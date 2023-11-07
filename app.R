@@ -152,7 +152,8 @@ ui <- fluidPage(
 
     # Application title
     titlePanel(
-      div(class = "fancy-title", "Omics Data Normalization")
+      div(class = "fancy-title", "Omics Data Normalization"),
+      windowTitle = "Omics Data Normalization"
     ),
 
     # alternatively:
