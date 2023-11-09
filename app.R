@@ -456,9 +456,6 @@ ui <- fluidPage(
                         # svg parameter
                         checkboxInput(inputId = "svg", label = "Additionally create SVG files", value = FALSE),
 
-                        # title for plots when downloading with button
-                        textInput("download_plots_title", "Optionally: Set a title for the plots:"),
-
                         # download button for PDF (and svg) raw
                         downloadButton("download_pdf_raw", "Download Plots Raw Data"),
 
@@ -1083,7 +1080,7 @@ server <- function(input, output, session) {
         if (input$svg) make_svg <- T else make_svg <- F
 
         rowwisenorm::plot_results(lowest_level_df = lowest_level_df_raw, exp_design = exp_design,
-                                  main = trimws(input$filename_raw), output_dir = trimws(input$dir_raw),
+                                  filename = trimws(input$filename_raw), output_dir = trimws(input$dir_raw),
                                   show_labels = show_lab, svg = make_svg,
                                   set_colors = pca_colors, set_symbols = pca_symbols)  # set colors and symbols
 
@@ -1106,7 +1103,7 @@ server <- function(input, output, session) {
         if (input$svg) make_svg <- T else make_svg <- F
 
         rowwisenorm::plot_results(lowest_level_df = lowest_level_df_pre, exp_design = exp_design,
-                                  main = trimws(input$filename_raw_pre), output_dir = trimws(input$dir_raw_pre),
+                                  filename = trimws(input$filename_raw_pre), output_dir = trimws(input$dir_raw_pre),
                                   show_labels = show_lab, svg = make_svg,
                                   set_colors = pca_colors, set_symbols = pca_symbols)  # set colors and symbols
 
@@ -1129,7 +1126,7 @@ server <- function(input, output, session) {
         if (input$svg) make_svg <- T else make_svg <- F
 
         rowwisenorm::plot_results(lowest_level_df = lowest_level_norm, exp_design = exp_design,
-                                  main = trimws(input$filename_norm), output_dir = trimws(input$dir_norm),
+                                  filename = trimws(input$filename_norm), output_dir = trimws(input$dir_norm),
                                   show_labels = show_lab, svg = make_svg,
                                   set_colors = pca_colors, set_symbols = pca_symbols)  # set colors and symbols
 
@@ -1145,17 +1142,11 @@ server <- function(input, output, session) {
     # download PDFs
     output$download_pdf_raw <- downloadHandler(
       filename = function(){
-        # handle file name for default case and when a title was set
-        if (trimws(input$download_plots_title) == ""){
-          f <- "results"
-        } else {
-          f <- trimws(input$download_plots_title)
-        }
         if (input$svg){
-          paste(f, "zip", sep = ".")
+          "results.zip"
         }
         else {
-          paste(f, "pdf", sep = ".")
+          "results.pdf"
         }
       },
       content = function(file) {
@@ -1180,32 +1171,25 @@ server <- function(input, output, session) {
                 dir.create(mytemp)
 
                 # Generate the PDF and SVG files in the temporary directory
-                rowwisenorm::plot_results(lowest_level_df_raw, exp_design, main = input$download_plots_title,
+                rowwisenorm::plot_results(lowest_level_df_raw, exp_design,
                                           output_dir = mytemp, show_labels = show_lab, svg = make_svg,
                                           set_colors = pca_colors, set_symbols = pca_symbols)  # set colors and symbols
                 Sys.sleep(0.5)
 
                 setwd(mytemp)
 
-                # handle file name
-                if (trimws(input$download_plots_title) == ""){
-                  f <- "results"
-                } else {
-                  f <- trimws(input$download_plots_title)
-                }
-
                 if (make_svg){
                   # make zip of the files inside temporary directory
-                  zip_file <- paste(f, "zip", sep = ".")
-                  zip(zip_file, files = c(paste(f, "pdf", sep = "."), paste(f, "01.svg", sep = ""),
-                                          paste(f, "02.svg", sep = ""), paste(f, "03.svg", sep = ""),
-                                          paste(f, "04.svg", sep = "")))
+                  zip_file <- "results.zip"
+                  zip(zip_file, files = c(paste("results", "pdf", sep = "."), paste("results", "01.svg", sep = ""),
+                                          paste("results", "02.svg", sep = ""), paste("results", "03.svg", sep = ""),
+                                          paste("results", "04.svg", sep = "")))
 
                   # Move the ZIP archive to the chosen location
                   file.rename(zip_file, file)
                 }
                 else {
-                  file.rename(paste(f, "pdf", sep = "."), file)
+                  file.rename("results.pdf", file)
                 }
 
                 setwd(original_working_directory)  # set back to original working directory
@@ -1222,17 +1206,11 @@ server <- function(input, output, session) {
     # same but with pre-processed data
     output$download_pdf_raw_pre <- downloadHandler(
       filename = function(){
-        # handle file name for default case and when a title was set
-        if (trimws(input$download_plots_title) == ""){
-          f <- "results"
-        } else {
-          f <- trimws(input$download_plots_title)
-        }
         if (input$svg){
-          paste(f, "zip", sep = ".")
+          "results.zip"
         }
         else {
-          paste(f, "pdf", sep = ".")
+          "results.pdf"
         }
       },
       content = function(file) {
@@ -1257,32 +1235,25 @@ server <- function(input, output, session) {
               dir.create(mytemp)
 
               # Generate the PDF and SVG files in the temporary directory
-              rowwisenorm::plot_results(lowest_level_df_pre, exp_design, main = input$download_plots_title,
+              rowwisenorm::plot_results(lowest_level_df_pre, exp_design,
                                         output_dir = mytemp, show_labels = show_lab, svg = make_svg,
                                         set_colors = pca_colors, set_symbols = pca_symbols)  # set colors and symbols
               Sys.sleep(0.5)
 
               setwd(mytemp)
 
-              # handle file name
-              if (trimws(input$download_plots_title) == ""){
-                f <- "results"
-              } else {
-                f <- trimws(input$download_plots_title)
-              }
-
               if (make_svg){
                 # make zip of the files inside temporary directory
-                zip_file <- paste(f, "zip", sep = ".")
-                zip(zip_file, files = c(paste(f, "pdf", sep = "."), paste(f, "01.svg", sep = ""),
-                                        paste(f, "02.svg", sep = ""), paste(f, "03.svg", sep = ""),
-                                        paste(f, "04.svg", sep = "")))
+                zip_file <- "results.zip"
+                zip(zip_file, files = c(paste("results", "pdf", sep = "."), paste("results", "01.svg", sep = ""),
+                                        paste("results", "02.svg", sep = ""), paste("results", "03.svg", sep = ""),
+                                        paste("results", "04.svg", sep = "")))
 
                 # Move the ZIP archive to the chosen location
                 file.rename(zip_file, file)
               }
               else {
-                file.rename(paste(f, "pdf", sep = "."), file)
+                file.rename("results.pdf", file)
               }
 
               setwd(original_working_directory)  # set back to original working directory
@@ -1298,17 +1269,11 @@ server <- function(input, output, session) {
 
     output$download_pdf_norm <- downloadHandler(
       filename = function(){
-        # handle file name for default case and when a title was set
-        if (trimws(input$download_plots_title) == ""){
-          f <- "results"
-        } else {
-          f <- trimws(input$download_plots_title)
-        }
         if (input$svg){
-          paste(f, "zip", sep = ".")
+          "results.zip"
         }
         else {
-          paste(f, "pdf", sep = ".")
+          "results.pdf"
         }
       },
       content = function(file) {
@@ -1333,32 +1298,25 @@ server <- function(input, output, session) {
               dir.create(mytemp)
 
               # Generate the PDF and SVG files in the temporary directory
-              rowwisenorm::plot_results(lowest_level_norm, exp_design, main = input$download_plots_title,
+              rowwisenorm::plot_results(lowest_level_norm, exp_design,
                                         output_dir = mytemp, show_labels = show_lab, svg = make_svg,
                                         set_colors = pca_colors, set_symbols = pca_symbols)  # set colors and symbols
               Sys.sleep(0.5)
 
               setwd(mytemp)
 
-              # handle file name
-              if (trimws(input$download_plots_title) == ""){
-                f <- "results"
-              } else {
-                f <- trimws(input$download_plots_title)
-              }
-
               if (make_svg){
                 # make zip of the files inside temporary directory
-                zip_file <- paste(f, "zip", sep = ".")
-                zip(zip_file, files = c(paste(f, "pdf", sep = "."), paste(f, "01.svg", sep = ""),
-                                        paste(f, "02.svg", sep = ""), paste(f, "03.svg", sep = ""),
-                                        paste(f, "04.svg", sep = "")))
+                zip_file <- "results.zip"
+                zip(zip_file, files = c(paste("results", "pdf", sep = "."), paste("results", "01.svg", sep = ""),
+                                        paste("results", "02.svg", sep = ""), paste("results", "03.svg", sep = ""),
+                                        paste("results", "04.svg", sep = "")))
 
                 # Move the ZIP archive to the chosen location
                 file.rename(zip_file, file)
               }
               else {
-                file.rename(paste(f, "pdf", sep = "."), file)
+                file.rename("results.pdf", file)
               }
 
               setwd(original_working_directory)  # set back to original working directory
