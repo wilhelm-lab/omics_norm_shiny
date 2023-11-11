@@ -35,7 +35,6 @@ ui <- fluidPage(
     # graphic adjustment
     tags$head(
       tags$style(HTML("hr {border-top: 1px solid #000000;}")),  # horizontal line thicker
-      #tags$script(src = "custom.js")  # not used
     ),
 
     # color of warnings/ errors inside textOutputs
@@ -48,6 +47,26 @@ ui <- fluidPage(
       background-color: rgba(0, 0, 139, 0.5); /* Transparent dark blue color */
       height: 1.3px; /* Adjust thickness here */
     }")),
+
+    # text for PCA score titles and scores
+    tags$style("#score_title_raw{color: darkblue;
+            font-size: 14px;
+            font-weight: bold;}"),
+    tags$style("#score_title_raw_pre{color: darkblue;
+            font-size: 14px;
+            font-weight: bold;}"),
+    tags$style("#score_title_norm{color: darkblue;
+            font-size: 14px;
+            font-weight: bold;}"),
+    tags$style("#score_raw{color: black;
+            font-size: 16px;
+            font-weight: bold;}"),
+    tags$style("#score_raw_pre{color: black;
+            font-size: 16px;
+            font-weight: bold;}"),
+    tags$style("#score_norm{color: black;
+            font-size: 16px;
+            font-weight: bold;}"),
 
     # background
     # tags$style(HTML('
@@ -540,6 +559,10 @@ ui <- fluidPage(
                         plotOutput("plot3_raw"),
                         br(),
                         plotOutput("plot4_raw"),
+                        br(),
+
+                        textOutput("score_title_raw"),
+                        textOutput("score_raw"),
                         ),
                  # middle - raw pre-processed
                  column(4,
@@ -563,6 +586,10 @@ ui <- fluidPage(
                         plotOutput("plot3_raw_pre"),
                         br(),
                         plotOutput("plot4_raw_pre"),
+                        br(),
+
+                        textOutput("score_title_raw_pre"),
+                        textOutput("score_raw_pre"),
                         ),
                  # right - normalized
                  column(4,
@@ -586,6 +613,10 @@ ui <- fluidPage(
                         plotOutput("plot3_norm"),
                         br(),
                         plotOutput("plot4_norm"),
+                        br(),
+
+                        textOutput("score_title_norm"),
+                        textOutput("score_norm"),
                         ),
 
                ),
@@ -865,6 +896,12 @@ server <- function(input, output, session) {
       output$plot2_norm <- renderUI({ })
       output$plot3_norm <- renderUI({ })
       output$plot4_norm <- renderUI({ })
+      output$score_title_raw <- renderText({ })
+      output$score_raw <- renderText({ })
+      output$score_title_raw_pre <- renderText({ })
+      output$score_raw_pre <- renderText({ })
+      output$score_title_norm <- renderText({ })
+      output$score_norm <- renderText({ })
 
       return_list <- readin()
       if (! is.null(return_list)){
@@ -1355,12 +1392,10 @@ server <- function(input, output, session) {
       }
     )
 
-
     # show plots - completely raw, raw pre-processed, normalized
     observeEvent(input$show_plots_raw, {
       # only do when data was processed (data frame not empty)
       if (nrow(lowest_level_df_raw) != 0){
-
         output$plot1_raw <- renderPlot({
           rowwisenorm::plot_correlations(lowest_level_df_raw)
         })
@@ -1376,13 +1411,21 @@ server <- function(input, output, session) {
           rowwisenorm::pcaPlot2(lowest_level_df_raw, exp_design, show_labels = show_lab,
                                 set_colors = pca_colors, set_symbols = pca_symbols)  # set colors and symbols
         })
+        output$score_title_raw <- renderText({
+          "Data-specific Score of the PCA plot:"
+        })
+        # catch score of PCA (not possible inside renderPlot)
+        score <- rowwisenorm::pcaPlot2(lowest_level_df_raw, exp_design, show_labels = F,
+                                       set_colors = pca_colors, set_symbols = pca_symbols)
+        output$score_raw <- renderText({
+          score
+        })
       }
     })
 
     observeEvent(input$show_plots_raw_pre, {
       # only do when data was processed (data frame not empty)
       if (nrow(lowest_level_df_pre) != 0){
-
         output$plot1_raw_pre <- renderPlot({
           rowwisenorm::plot_correlations(lowest_level_df_pre)
         })
@@ -1398,13 +1441,21 @@ server <- function(input, output, session) {
           rowwisenorm::pcaPlot2(lowest_level_df_pre, exp_design, show_labels = show_lab,
                                 set_colors = pca_colors, set_symbols = pca_symbols)  # set colors and symbols
         })
+        output$score_title_raw_pre <- renderText({
+          "Data-specific Score of the PCA plot:"
+        })
+        # catch score of PCA (not possible inside renderPlot)
+        score <- rowwisenorm::pcaPlot2(lowest_level_df_pre, exp_design, show_labels = F,
+                                       set_colors = pca_colors, set_symbols = pca_symbols)
+        output$score_raw_pre <- renderText({
+          score
+        })
       }
     })
 
     observeEvent(input$show_plots_norm, {
       # only do when data was processed (data frame not empty)
       if (nrow(lowest_level_norm) != 0){
-
         output$plot1_norm <- renderPlot({
           rowwisenorm::plot_correlations(lowest_level_norm)
         })
@@ -1420,6 +1471,16 @@ server <- function(input, output, session) {
           rowwisenorm::pcaPlot2(lowest_level_norm, exp_design, show_labels = show_lab,
                                 set_colors = pca_colors, set_symbols = pca_symbols)  # set colors and symbols
         })
+        output$score_title_norm <- renderText({
+          "Data-specific Score of the PCA plot:"
+        })
+        # catch score of PCA (not possible inside renderPlot)
+        score <- rowwisenorm::pcaPlot2(lowest_level_norm, exp_design, show_labels = F,
+                                       set_colors = pca_colors, set_symbols = pca_symbols)
+        output$score_norm <- renderText({
+          score
+        })
+
       }
     })
 
