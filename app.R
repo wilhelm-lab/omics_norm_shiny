@@ -399,18 +399,23 @@ ui <- fluidPage(
                  column(6,
                         # show normalized data
                         div(
-                          h3("Values of Normalized Data", style = "font-size: 20px; font-weight:750; color: darkblue;"),
+                          h3("Preview Normalized Data", style = "font-size: 20px; font-weight:750; color: darkblue;"),
                           class = "title-div"
                         ),
                         hr(class = "title-hr"),  # horizontal line
+
+                        # choice which rows to be shown
+                        numericInput("start_row", "Row to start:", value = 1, step = 1),
+                        numericInput("end_row", "Row to end:", value = 5, step = 1),
 
                         # button for showing data
                         actionButton(inputId = "show_data", label = "Show normalized data"),
                         div(style = "height: 20px;"),  # Add 20px of space
 
                         # display data as a table, fill available space without overlapping right column
-                        div(style = "max-width: 100%; overflow-x: auto;", tableOutput("data_output")),
+                        div(style = "max-width: 100%; max-height: 300px; overflow-x: auto;", tableOutput("data_output")),
 
+                        textOutput("show_data_note")
                         ),
                  # right
                  column(6,
@@ -1061,10 +1066,29 @@ server <- function(input, output, session) {
 
     # show data - EXECUTION of normalization
     observeEvent(input$show_data, {
-
-      output$data_output <- renderTable({
-        head(lowest_level_norm)
-      })
+      if(nrow(lowest_level_norm > 0)){
+        output$data_output <- renderTable({
+          beginning <- input$start_row
+          ending <- input$end_row
+          if (is.numeric(beginning) && is.numeric(ending) && beginning >= 0 && ending >= 0 && beginning%%1==0  && ending%%1==0){  # check that positive integers
+            if(ending > nrow(lowest_level_norm)){  # max ending is the number of rows that are present
+              ending <- nrow(lowest_level_norm)
+            }
+            lowest_level_norm[beginning:ending, ]
+          }
+          else {
+            if(5 > nrow(lowest_level_norm)){
+              lowest_level_norm[1:nrow(lowest_level_norm), ]  # default if not valid entry and less than 5 rows present
+            } else {
+              lowest_level_norm[1:5, ]  # default if not valid entry
+            }
+          }
+        })
+        # note
+        output$show_data_note <- renderText({
+          "The first column stores the original row number inside the data."
+        })
+      }
 
     })
 
