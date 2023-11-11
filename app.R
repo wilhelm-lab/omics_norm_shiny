@@ -852,6 +852,7 @@ server <- function(input, output, session) {
       })
       output$normalize_row_warning <- renderText({ })  # warning of normalize_row when no valid refs
       output$data_output <- renderUI({ })  # show data field
+      output$show_data_note <- renderText({ })  # show data note
       output$plot1_raw <- renderUI({ })
       output$plot2_raw <- renderUI({ })
       output$plot3_raw <- renderUI({ })
@@ -1064,7 +1065,7 @@ server <- function(input, output, session) {
     }
 
 
-    # show data - EXECUTION of normalization
+    # show data
     observeEvent(input$show_data, {
       if(nrow(lowest_level_norm > 0)){
         output$data_output <- renderTable({
