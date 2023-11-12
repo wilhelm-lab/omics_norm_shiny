@@ -1417,6 +1417,9 @@ server <- function(input, output, session) {
         # catch score of PCA (not possible inside renderPlot)
         score <- rowwisenorm::pcaPlot2(lowest_level_df_raw, exp_design, show_labels = F,
                                        set_colors = pca_colors, set_symbols = pca_symbols)
+        if(length(dev.list())!=0) {
+          dev.off()
+        }
         output$score_raw <- renderText({
           score
         })
@@ -1447,6 +1450,9 @@ server <- function(input, output, session) {
         # catch score of PCA (not possible inside renderPlot)
         score <- rowwisenorm::pcaPlot2(lowest_level_df_pre, exp_design, show_labels = F,
                                        set_colors = pca_colors, set_symbols = pca_symbols)
+        if(length(dev.list())!=0) {
+          dev.off()
+        }
         output$score_raw_pre <- renderText({
           score
         })
@@ -1477,6 +1483,9 @@ server <- function(input, output, session) {
         # catch score of PCA (not possible inside renderPlot)
         score <- rowwisenorm::pcaPlot2(lowest_level_norm, exp_design, show_labels = F,
                                        set_colors = pca_colors, set_symbols = pca_symbols)
+        if(length(dev.list())!=0) {
+          dev.off()
+        }
         output$score_norm <- renderText({
           score
         })
