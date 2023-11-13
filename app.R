@@ -48,7 +48,7 @@ ui <- fluidPage(
       height: 1.3px; /* Adjust thickness here */
     }")),
 
-    # text for PCA score titles and scores
+    # text style for PCA score titles and scores
     tags$style("#score_title_raw{color: darkblue;
             font-size: 14px;
             font-weight: bold;}"),
@@ -113,6 +113,8 @@ ui <- fluidPage(
     #     border: 1px solid #ddd; /* Delicate gray border */
     #   }
     # ')),
+
+    # overall appearance
     tags$style(HTML('
       body {
         background: rgba(204, 229, 255, 0.7); /* Blue transparent general background */
@@ -151,476 +153,477 @@ ui <- fluidPage(
         border: 1px solid #ddd; /* Delicate gray border */
       }
     ')),
-    # flow rainbow background:
-    #' tags$style(HTML('
-    #'   body {
-    #'     background: linear-gradient(135deg, #E0E0FF, #FFCCCC, #FF99CC, #FFCC99, #FFFF99, #CCFF99, #99FFCC, #99CCFF, #E0E0FF);
-    #'     background-size: 200% 200%; /* Increase the size to control the repeat */
-    #'     animation: gradient-flow 10s linear infinite; /* Add animation to make it flow */
-    #'   }
-    #'
-    #'   @keyframes gradient-flow {
-    #'     0% {
-    #'       background-position: 0% 0%;
-    #'     }
-    #'     100% {
-    #'       background-position: 100% 100%;
-    #'     }
-    #'   }
-    #' ')),
 
-    # Application title
-    titlePanel(
-      div(class = "fancy-title", "Omics Data Normalization"),
-      windowTitle = "Omics Data Normalization"
+    # fixed position of the title and tab titles
+    tags$head(
+      tags$style(
+        HTML("
+           /* set the height of the tab containers */
+           .fixed-height {
+              height: 80vh;  /* set height as 80% viewerport height (adjusted to the window) */
+              overflow-y: auto;
+              overflow-x: hidden;  /* no horizontal scroll */
+            }
+           /* fix the position of the title */
+           .fixed-title {
+              position: sticky;
+              top: 0;
+              z-index: 1000; /* ensure that title stays on top */
+           }
+           ")
+      )
     ),
 
-    # alternatively:
-    # titlePanel(
-    #   h2("Omics Data Normalization", align="center",
-    #      style="font-family: Garamond; font-size: 35px; font-weight:350; color:darkblue;"), windowTitle = "Omics Data Normalization"
-    # ),
+    # Application title - fixed on top of app
+    div(class = "fixed-title",
+        titlePanel(
+          div(class = "fancy-title", "Omics Data Normalization"),
+          windowTitle = "Omics Data Normalization"
+        ),
+    ),
 
     # part the ui in three parts
     tabsetPanel(
       # left tab
       tabPanel("Input and Settings",
-               # fluid row for the numbers 1 to 3
-               fluidRow(
-                 style = "margin-top: 10px;", # Add margin to the top of the fluidRow  #284D8E
-                 column(4, align = "center",
-                        div(
-                          style = "border: 3px solid #284D8E; border-radius: 50%; width: 50px; height: 50px; display: flex; justify-content: center; align-items: center; background-color: rgba(0, 0, 139, 0.4);",
-                          h2(
-                            "1",
-                            style = "line-height: 50px; margin: 0; color: white;"
-                          )
-                        )
-                 ),  # First column with the number 1 inside a circle
-                 column(4, align = "center",
-                        div(
-                          style = "border: 3px solid #284D8E; border-radius: 50%; width: 50px; height: 50px; display: flex; justify-content: center; align-items: center; background-color: rgba(0, 0, 139, 0.4);",
-                          h2(
-                            "2",
-                            style = "line-height: 50px; margin: 0; color: white;"
-                          )
-                        )
-                 ),  # Second column with the number 2 inside a circle
-                 column(4, align = "center",
-                        div(
-                          style = "border: 3px solid #284D8E; border-radius: 50%; width: 50px; height: 50px; display: flex; justify-content: center; align-items: center; background-color: rgba(0, 0, 139, 0.4);",
-                          h2(
-                            "3",
-                            style = "line-height: 50px; margin: 0; color: white;"
-                          )
-                        )
-                 )  # Third column with the number 3 inside a circle
-               ),
-               fluidRow(
-                 # left
-                 column(4,
-                        div(
-                          h3("Data", style = "font-size: 20px; font-weight:750; color: darkblue;"),
-                          class = "title-div"
-                        ),
-                        hr(class = "title-hr"),  # horizontal line
-
-                        # upload files
-                        fileInput(inputId = "data", label = "Upload your data",
-                                  accept = c(".csv, .tsv, .txt", "text/*")),
-                        textOutput("file_name_data"),
-
-                        fileInput(inputId = "exp_design", label = "Upload the experimental design for your data",
-                                  accept = c(".csv, .tsv, .txt", "text/*")),
-                        textOutput("file_name_exp_design"),
-
-                       ),
-                 # middle
-                 column(4,
-                        div(
-                          h3("Settings", style = "font-size: 20px; font-weight:750; color: darkblue;"),
-                          class = "title-div"
-                        ),
-                        hr(class = "title-hr"),
-                        # choose method
-                        div(
-                          h3("Normalization Method", style = "font-size: 17px; font-weight:550;"),
-                          class = "title-div"
-                        ),
-                        hr(),
-                        selectInput(inputId = "method", label = "Method",
-                                    choices = c("row-wise-normalization" = "row-wise-normalization",
-                                                "total-sum" = "total-sum", "VST" = "VST", "VSN" = "VSN",
-                                                "quantile-normalization" = "quantile-normalization")),
-                        textOutput("selected_method"),
-                        # Preprocessing possible for all methods: - but log2 not for VST allowed (no negative values allowed)
-                        div(
-                          h3("Preprocessing", style = "font-size: 17px; font-weight:550;"),
-                          class = "title-div"
-                        ),
-                        hr(),  # horizontal line
-
-                        # filtering of features - only show a checkbox if feature is available in data
-                        textOutput("feature_note"),
-                        actionButton("generate_features", "Find Features", icon = icon("search")),
-                        # status output with space above
-                        uiOutput("generate_features_status", style = "margin-top: 20px;"),
-
-                        uiOutput("feature_text"),
-                        uiOutput("onlyBySiteCheckbox"),
-                        uiOutput("reverseCheckbox"),
-                        uiOutput("contaminantCheckbox"),
-                        hr(),
-
-
-                        # log2
-                        conditionalPanel(
-                          condition = "input.method != 'VST' ",
-                          checkboxInput(inputId = "log2_t", label = "Logarithmic transformation", value = TRUE),
-                          textOutput("log2_transform"),
-                        ),
-
-                        # filter_rows
-                        checkboxInput(inputId = "filterrows", label = "Filter out rows", value = FALSE),
-
-                        conditionalPanel(
-                          condition = "input.filterrows == true",
-                          #textInput(inputId = "filterrowsratio", label = "Optionally: Your desired ratio of valid values per row as a decimal between 0 and 1:", placeholder = "Default: 0.5"),
-                          sliderInput(inputId = "filterrowsratio", label = "Your desired ratio of valid values per row:", min=0, max=1, value = 0.5, step = 0.01),
-                          textOutput("filterrows_note"),
-                        ),
-
-                        # sum normalize
-                        conditionalPanel(
-                          condition = "input.method != 'total-sum' ",
-                          checkboxInput(inputId = "sum_norm", label = "Sum normalize", value = FALSE),
-                          textOutput("sum_normal"),
-                        ),
-
-                        # parameter for sum normalize - same IDs as for total sum since this preprocessing appears for all methods without total sum
-                        conditionalPanel(
-                          condition = "input.sum_norm & input.method != 'total-sum' ", # important: set off for method total-sum (otherwise, when clicked at a different method it still appears)
-                          # refFunc
-                          selectInput(inputId = "refFunc_sum", label = "Select the reference Function", choices = c("sum" = "sum", "median" = "median")),
-                          textOutput("selected_refFunc_sum_prev"),
-                          # norm
-                          checkboxInput(inputId = "norm_sum", label = "Normalize the total sum", value = TRUE),
-                          # na.rm - this ID only here (needs to work for all methods, the other na_rm is used for total sum and row wise in specific setups)
-                          checkboxInput(inputId = "na_rm_sum", label = "Remove NA values inside reference function", value = TRUE),
-                        ),
-
-                        # median normalize
-                        checkboxInput(inputId = "median_norm", label = "Median normalize", value = FALSE),
-
-
-                        ### Setups for specific methods: - only for row-wise and total sum
-                        conditionalPanel(
-                          condition = "input.method == 'row-wise-normalization' || input.method == 'total-sum' ",
+               div(class = "fixed-height",
+                 # fluid row for the numbers 1 to 3
+                 fluidRow(
+                   style = "margin-top: 10px;", # Add margin to the top of the fluidRow  #284D8E
+                   column(4, align = "center",
                           div(
-                            h3("Method-Specific Setups", style = "font-size: 17px; font-weight:550;"),
+                            style = "border: 3px solid #284D8E; border-radius: 50%; width: 50px; height: 50px; display: flex; justify-content: center; align-items: center; background-color: rgba(0, 0, 139, 0.4);",
+                            h2(
+                              "1",
+                              style = "line-height: 50px; margin: 0; color: white;"
+                            )
+                          )
+                   ),  # First column with the number 1 inside a circle
+                   column(4, align = "center",
+                          div(
+                            style = "border: 3px solid #284D8E; border-radius: 50%; width: 50px; height: 50px; display: flex; justify-content: center; align-items: center; background-color: rgba(0, 0, 139, 0.4);",
+                            h2(
+                              "2",
+                              style = "line-height: 50px; margin: 0; color: white;"
+                            )
+                          )
+                   ),  # Second column with the number 2 inside a circle
+                   column(4, align = "center",
+                          div(
+                            style = "border: 3px solid #284D8E; border-radius: 50%; width: 50px; height: 50px; display: flex; justify-content: center; align-items: center; background-color: rgba(0, 0, 139, 0.4);",
+                            h2(
+                              "3",
+                              style = "line-height: 50px; margin: 0; color: white;"
+                            )
+                          )
+                   )  # Third column with the number 3 inside a circle
+                 ),
+                 fluidRow(
+                   # left
+                   column(4,
+                          div(
+                            h3("Data", style = "font-size: 20px; font-weight:750; color: darkblue;"),
+                            class = "title-div"
+                          ),
+                          hr(class = "title-hr"),  # horizontal line
+
+                          # upload files
+                          fileInput(inputId = "data", label = "Upload your data",
+                                    accept = c(".csv, .tsv, .txt", "text/*")),
+                          textOutput("file_name_data"),
+
+                          fileInput(inputId = "exp_design", label = "Upload the experimental design for your data",
+                                    accept = c(".csv, .tsv, .txt", "text/*")),
+                          textOutput("file_name_exp_design"),
+
+                         ),
+                   # middle
+                   column(4,
+                          div(
+                            h3("Settings", style = "font-size: 20px; font-weight:750; color: darkblue;"),
+                            class = "title-div"
+                          ),
+                          hr(class = "title-hr"),
+                          # choose method
+                          div(
+                            h3("Normalization Method", style = "font-size: 17px; font-weight:550;"),
+                            class = "title-div"
+                          ),
+                          hr(),
+                          selectInput(inputId = "method", label = "Method",
+                                      choices = c("row-wise-normalization" = "row-wise-normalization",
+                                                  "total-sum" = "total-sum", "VST" = "VST", "VSN" = "VSN",
+                                                  "quantile-normalization" = "quantile-normalization")),
+                          textOutput("selected_method"),
+                          # Preprocessing possible for all methods: - but log2 not for VST allowed (no negative values allowed)
+                          div(
+                            h3("Preprocessing", style = "font-size: 17px; font-weight:550;"),
                             class = "title-div"
                           ),
                           hr(),  # horizontal line
-                        ),
 
-                        # active mode - only for row-wise
-                        conditionalPanel(
-                          condition = "input.method == 'row-wise-normalization' ",
-                          checkboxInput(inputId = "active_mode", label = "Manually setting reference channels", value = FALSE),
-                          textOutput("selected_mode"),
-                        ),
+                          # filtering of features - only show a checkbox if feature is available in data
+                          textOutput("feature_note"),
+                          actionButton("generate_features", "Find Features", icon = icon("search")),
+                          # status output with space above
+                          uiOutput("generate_features_status", style = "margin-top: 20px;"),
 
-                        # if active is set: input of references - this input is later used for ref parameter
-                        conditionalPanel(
-                          condition = "input.active_mode == true & input.method == 'row-wise-normalization' ",  # important: set only for row-wise (otherwise, when clicked at a different method it still appears)
-                          textInput(inputId = "refs", label = "Please enter the condition names of the references, separated by a comma:")
-                        ),
-
-                        # na.rm - only for row-wise and total-sum (also specifies na.rm in row-wise function)
-                        conditionalPanel(
-                          condition = "input.method == 'row-wise-normalization' || input.method == 'total-sum' ",
-                          checkboxInput(inputId = "na_rm", label = "Remove NA values inside reference function", value = TRUE),
-                          textOutput("selected_na_rm"),
-                        ),
-
-                        # refFunc - only for row-wise (because other default)
-                        conditionalPanel(
-                          condition = "input.method == 'row-wise-normalization' ",
-                          selectInput(inputId = "refFunc", label = "Select the reference Function", choices = c("median" = "median", "sum" = "sum")),
-                          textOutput("selected_refFunc"),
-                        ),
+                          uiOutput("feature_text"),
+                          uiOutput("onlyBySiteCheckbox"),
+                          uiOutput("reverseCheckbox"),
+                          uiOutput("contaminantCheckbox"),
+                          hr(),
 
 
-                        # specific parameter for total sum - only for total-sum
-                        conditionalPanel(
-                          condition = "input.method == 'total-sum' ",
-                          # refFunc
-                          selectInput(inputId = "refFunc_sum", label = "Select the reference Function", choices = c("sum" = "sum", "median" = "median")),
-                          textOutput("selected_refFunc_sum"),
-                          # norm
-                          checkboxInput(inputId = "norm_sum", label = "Normalize the total sum", value = TRUE),
-                          # na.rm - use the same as for row-wise
-                          # checkboxInput(inputId = "na_rm_sum", label = "Remove NA values", value = TRUE),
-                        ),
+                          # log2
+                          conditionalPanel(
+                            condition = "input.method != 'VST' ",
+                            checkboxInput(inputId = "log2_t", label = "Logarithmic transformation", value = TRUE),
+                            textOutput("log2_transform"),
+                          ),
 
-                        ### Graphical adjustment
-                        div(
-                          h3("Plot Adjustment", style = "font-size: 17px; font-weight:550;"),
-                          class = "title-div"
-                        ),
-                        hr(),
-                        # batch colors
-                        selectInput("batch_colors_manually", "Optionally: Select colors to be used for the batches inside the PCA plots and the heatmaps",
-                                    choices = colors(), multiple = TRUE),
-                        textOutput("batch_colors_manually_note"),
-                        br(),
-                        # condition symbols
-                        selectInput("condition_symbols_manually", "Optionally: Select symbols to be used for the conditions inside the PCA plots",
-                                    choices = 0:18, multiple = TRUE),
-                        textOutput("condition_symbols_manually_note"),
-                        plotOutput("pca_symbols_plot", height = "200px", width = "60%"),  # adjusted size
-                        br(),
+                          # filter_rows
+                          checkboxInput(inputId = "filterrows", label = "Filter out rows", value = FALSE),
 
-                        ),
-                 # right
-                 column(4,
-                        # process button
-                        div(
-                          h2("Start calculation", style = "font-size: 20px; font-weight:750; color: darkblue;"),
-                          class = "title-div"
-                        ),
-                        hr(class = "title-hr"),
-                        textOutput("process_note"),
-                        actionButton("process", label = "Process", icon = icon("refresh")),
+                          conditionalPanel(
+                            condition = "input.filterrows == true",
+                            #textInput(inputId = "filterrowsratio", label = "Optionally: Your desired ratio of valid values per row as a decimal between 0 and 1:", placeholder = "Default: 0.5"),
+                            sliderInput(inputId = "filterrowsratio", label = "Your desired ratio of valid values per row:", min=0, max=1, value = 0.5, step = 0.01),
+                            textOutput("filterrows_note"),
+                          ),
 
-                        # status output with space above
-                        uiOutput("process_status", style = "margin-top: 20px; font-size:15px"),
+                          # sum normalize
+                          conditionalPanel(
+                            condition = "input.method != 'total-sum' ",
+                            checkboxInput(inputId = "sum_norm", label = "Sum normalize", value = FALSE),
+                            textOutput("sum_normal"),
+                          ),
 
-                        # Notifications (warning and error messages)
-                        div(
-                          h2("Notifications", style = "font-size: 17px; font-weight:550; color:darkblue"),
-                          class = "title-div"
-                        ),
-                        tags$hr(style="border-color: darkblue;"),  # horizontal line
+                          # parameter for sum normalize - same IDs as for total sum since this preprocessing appears for all methods without total sum
+                          conditionalPanel(
+                            condition = "input.sum_norm & input.method != 'total-sum' ", # important: set off for method total-sum (otherwise, when clicked at a different method it still appears)
+                            # refFunc
+                            selectInput(inputId = "refFunc_sum", label = "Select the reference Function", choices = c("sum" = "sum", "median" = "median")),
+                            textOutput("selected_refFunc_sum_prev"),
+                            # norm
+                            checkboxInput(inputId = "norm_sum", label = "Normalize the total sum", value = TRUE),
+                            # na.rm - this ID only here (needs to work for all methods, the other na_rm is used for total sum and row wise in specific setups)
+                            checkboxInput(inputId = "na_rm_sum", label = "Exclude NA values inside reference function", value = TRUE),
+                          ),
 
-                        textOutput("reading_error"),  # handle stop() call inside reading
-                        textOutput("reading_warning"),  # handle warning() inside reading
-                        textOutput("normalize_row_warning"),  # not valid reference entered
-                       ),
+                          # median normalize
+                          checkboxInput(inputId = "median_norm", label = "Median normalize", value = FALSE),
 
-               ),
 
+                          ### Setups for specific methods: - only for row-wise and total sum
+                          conditionalPanel(
+                            condition = "input.method == 'row-wise-normalization' || input.method == 'total-sum' ",
+                            div(
+                              h3("Method-Specific Setups", style = "font-size: 17px; font-weight:550;"),
+                              class = "title-div"
+                            ),
+                            hr(),  # horizontal line
+                          ),
+
+                          # active mode - only for row-wise
+                          conditionalPanel(
+                            condition = "input.method == 'row-wise-normalization' ",
+                            checkboxInput(inputId = "active_mode", label = "Manually setting reference channels", value = FALSE),
+                            textOutput("selected_mode"),
+                          ),
+
+                          # if active is set: input of references - this input is later used for ref parameter
+                          conditionalPanel(
+                            condition = "input.active_mode == true & input.method == 'row-wise-normalization' ",  # important: set only for row-wise (otherwise, when clicked at a different method it still appears)
+                            textInput(inputId = "refs", label = "Please enter the condition names of the references, separated by a comma:")
+                          ),
+
+                          # na.rm - only for row-wise and total-sum (also specifies na.rm in row-wise function)
+                          conditionalPanel(
+                            condition = "input.method == 'row-wise-normalization' || input.method == 'total-sum' ",
+                            checkboxInput(inputId = "na_rm", label = "Exclude NA values inside reference function", value = TRUE),
+                            textOutput("selected_na_rm"),
+                          ),
+
+                          # refFunc - only for row-wise (because other default)
+                          conditionalPanel(
+                            condition = "input.method == 'row-wise-normalization' ",
+                            selectInput(inputId = "refFunc", label = "Select the reference Function", choices = c("median" = "median", "sum" = "sum")),
+                            textOutput("selected_refFunc"),
+                          ),
+
+
+                          # specific parameter for total sum - only for total-sum
+                          conditionalPanel(
+                            condition = "input.method == 'total-sum' ",
+                            # refFunc
+                            selectInput(inputId = "refFunc_sum", label = "Select the reference Function", choices = c("sum" = "sum", "median" = "median")),
+                            textOutput("selected_refFunc_sum"),
+                            # norm
+                            checkboxInput(inputId = "norm_sum", label = "Normalize the total sum", value = TRUE),
+                            # na.rm - use the same as for row-wise
+                            # checkboxInput(inputId = "na_rm_sum", label = "Remove NA values", value = TRUE),
+                          ),
+
+                          ### Graphical adjustment
+                          div(
+                            h3("Plot Adjustment", style = "font-size: 17px; font-weight:550;"),
+                            class = "title-div"
+                          ),
+                          hr(),
+                          # batch colors
+                          selectInput("batch_colors_manually", "Optionally: Select colors to be used for the batches inside the PCA plots and the heatmaps",
+                                      choices = colors(), multiple = TRUE),
+                          textOutput("batch_colors_manually_note"),
+                          br(),
+                          # condition symbols
+                          selectInput("condition_symbols_manually", "Optionally: Select symbols to be used for the conditions inside the PCA plots",
+                                      choices = 0:18, multiple = TRUE),
+                          textOutput("condition_symbols_manually_note"),
+                          plotOutput("pca_symbols_plot", height = "200px", width = "60%"),  # adjusted size
+                          br(),
+
+                          ),
+                   # right
+                   column(4,
+                          # process button
+                          div(
+                            h2("Start calculation", style = "font-size: 20px; font-weight:750; color: darkblue;"),
+                            class = "title-div"
+                          ),
+                          hr(class = "title-hr"),
+                          textOutput("process_note"),
+                          actionButton("process", label = "Process", icon = icon("refresh")),
+
+                          # status output with space above
+                          uiOutput("process_status", style = "margin-top: 20px; font-size:15px"),
+
+                          # Notifications (warning and error messages)
+                          div(
+                            h2("Notifications", style = "font-size: 17px; font-weight:550; color:darkblue"),
+                            class = "title-div"
+                          ),
+                          tags$hr(style="border-color: darkblue;"),  # horizontal line
+
+                          textOutput("reading_error"),  # handle stop() call inside reading
+                          textOutput("reading_warning"),  # handle warning() inside reading
+                          textOutput("normalize_row_warning"),  # not valid reference entered
+                         ),
+
+                 ),
+                ),
              ),
       # middle tab
       tabPanel("Download Results",
-               fluidRow(
-                 # left
-                 column(6,
-                        # show normalized data
-                        div(
-                          h3("Preview Normalized Data", style = "font-size: 20px; font-weight:750; color: darkblue;"),
-                          class = "title-div"
-                        ),
-                        hr(class = "title-hr"),  # horizontal line
-
-                        # choice which rows to be shown
-                        numericInput("start_row", "Row to start:", value = 1, step = 1),
-                        numericInput("end_row", "Row to end:", value = 5, step = 1),
-
-                        # button for showing data
-                        actionButton(inputId = "show_data", label = "Show normalized data"),
-                        div(style = "height: 20px;"),  # Add 20px of space
-
-                        # display data as a table, fill available space without overlapping right column
-                        div(style = "max-width: 100%; max-height: 300px; overflow-x: auto;", tableOutput("data_output")),
-
-                        textOutput("show_data_note")
-                        ),
-                 # right
-                 column(6,
-                        # download
-                        div(
-                          h3("Write Into File", style = "font-size: 20px; font-weight:750; color: darkblue;"),
-                          class = "title-div"
-                        ),
-                        hr(class = "title-hr"),  # horizontal line
-
-                        # download button for outfile lowest-level
-                        downloadButton("download_outfile", "Download Data on Lowest Level"),
-
-                        # download button for outfile with additional columns
-                        downloadButton("download_outfile_comp", "Download Data Complete"),
-
-                        # only for local mode: download outfile - manually
-                        div(
-                          id = "local-content-1",
-                          checkboxInput(inputId = "writeoutfile", div(icon("star"), "Manually: Download normalized data"), value = FALSE),
-                          textOutput("writeout"),
-
-                          conditionalPanel(
-                            condition = "input.writeoutfile == true",
-                            textInput(inputId = "filename_outfile", label = "Optionally: Your desired file name:"),
-                            textInput(inputId = "dir_outfile", label = "Optionally: Your desired directory path:", placeholder = "current working directory"),
-                            selectInput(inputId = "outfile_level", label = "Level of complexity",
-                                        choices = c("lowest-level" = "lowest-level", "all-columns" = "all-columns")),
-                            actionButton(inputId = "save_outfile", label = "Submit"),
-                            verbatimTextOutput("outfile_path")
+               div(class = "fixed-height",
+                 fluidRow(
+                   # left
+                   column(6,
+                          # show normalized data
+                          div(
+                            h3("Preview Normalized Data", style = "font-size: 20px; font-weight:750; color: darkblue;"),
+                            class = "title-div"
                           ),
-                        ),
+                          hr(class = "title-hr"),  # horizontal line
 
-                        div(
-                          h3("Download Plots", style = "font-size: 20px; font-weight:750; color: darkblue;"),
-                          class = "title-div"
-                        ),
-                        hr(class = "title-hr"),  # horizontal line
+                          # choice which rows to be shown
+                          numericInput("start_row", "Row to start:", value = 1, step = 1),
+                          numericInput("end_row", "Row to end:", value = 5, step = 1),
 
-                        # show labels parameter for PCA labels
-                        checkboxInput(inputId = "show_labels", label = "Show labels inside PCA plot", value = FALSE),
+                          # button for showing data
+                          actionButton(inputId = "show_data", label = "Show normalized data"),
+                          div(style = "height: 20px;"),  # Add 20px of space
 
-                        # svg parameter
-                        checkboxInput(inputId = "svg", label = "Additionally create SVG files", value = FALSE),
+                          # display data as a table, fill available space without overlapping right column
+                          div(style = "max-width: 100%; max-height: 300px; overflow-x: auto;", tableOutput("data_output")),
 
-                        # download button for PDF (and svg) raw
-                        downloadButton("download_pdf_raw", "Download Plots Raw Data"),
+                          textOutput("show_data_note")
+                          ),
+                   # right
+                   column(6,
+                          # download
+                          div(
+                            h3("Write Into File", style = "font-size: 20px; font-weight:750; color: darkblue;"),
+                            class = "title-div"
+                          ),
+                          hr(class = "title-hr"),  # horizontal line
 
-                        # download button for PDF (and svg) raw pre-processed
-                        downloadButton("download_pdf_raw_pre", "Download Plots Raw Data Pre-Processed"),
+                          # download button for outfile lowest-level
+                          downloadButton("download_outfile", "Download Data on Lowest Level"),
 
-                        # download button for PDF (and svg) normalized
-                        downloadButton("download_pdf_norm", "Download Plots Normalized Data"),
+                          # download button for outfile with additional columns
+                          downloadButton("download_outfile_comp", "Download Data Complete"),
 
-                        # only for local mode: manual downloads
-                        div(
-                          id = "local-content-2",
-                          # download plots raw - manually
-                          checkboxInput(inputId = "save_plots_raw", div(icon("star"), "Manually: Save plots for raw data"), value = FALSE),
-                          textOutput("saving_plots_raw"),
+                          # only for local mode: download outfile - manually
+                          div(
+                            id = "local-content-1",
+                            checkboxInput(inputId = "writeoutfile", div(icon("star"), "Manually: Download normalized data"), value = FALSE),
+                            textOutput("writeout"),
 
-                          conditionalPanel(
-                            condition = "input.save_plots_raw == true",
-                            textInput(inputId = "filename_raw", label = "Optionally: Your desired file name and plot title:"),
-                            textInput(inputId = "dir_raw", label = "Optionally: Your desired directory path:", placeholder = "current working directory"),
-                            actionButton(inputId = "save_pdf_raw", label = "Submit"),
-                            verbatimTextOutput("pdf_path_raw")
+                            conditionalPanel(
+                              condition = "input.writeoutfile == true",
+                              textInput(inputId = "filename_outfile", label = "Optionally: Your desired file name:"),
+                              textInput(inputId = "dir_outfile", label = "Optionally: Your desired directory path:", placeholder = "current working directory"),
+                              selectInput(inputId = "outfile_level", label = "Level of complexity",
+                                          choices = c("lowest-level" = "lowest-level", "all-columns" = "all-columns")),
+                              actionButton(inputId = "save_outfile", label = "Submit"),
+                              verbatimTextOutput("outfile_path")
+                            ),
                           ),
 
-                          # download plots raw pre-processed - manually
-                          checkboxInput(inputId = "save_plots_raw_pre", div(icon("star"), "Manually: Save plots for raw data pre-processed"), value = FALSE),
-                          textOutput("saving_plots_raw_pre"),
-
-                          conditionalPanel(
-                            condition = "input.save_plots_raw_pre == true",
-                            textInput(inputId = "filename_raw_pre", label = "Optionally: Your desired file name and plot title:"),
-                            textInput(inputId = "dir_raw_pre", label = "Optionally: Your desired directory path:", placeholder = "current working directory"),
-                            actionButton(inputId = "save_pdf_raw_pre", label = "Submit"),
-                            verbatimTextOutput("pdf_path_raw_pre")
+                          div(
+                            h3("Download Plots", style = "font-size: 20px; font-weight:750; color: darkblue;"),
+                            class = "title-div"
                           ),
+                          hr(class = "title-hr"),  # horizontal line
 
-                          # download plots normalized - manually
-                          checkboxInput(inputId = "save_plots_norm", div(icon("star"), "Manually: Save plots for normalized data"), value = FALSE),
-                          textOutput("saving_plots_norm"),
+                          # show labels parameter for PCA labels
+                          checkboxInput(inputId = "show_labels", label = "Show labels inside PCA plot", value = FALSE),
 
-                          conditionalPanel(
-                            condition = "input.save_plots_norm == true",
-                            textInput(inputId = "filename_norm", label = "Optionally: Your desired file name and plot title:"),
-                            textInput(inputId = "dir_norm", label = "Optionally: Your desired directory path:", placeholder = "current working directory"),
-                            actionButton(inputId = "save_pdf_norm", label = "Submit"),
-                            verbatimTextOutput("pdf_path_norm")
+                          # svg parameter
+                          checkboxInput(inputId = "svg", label = "Additionally create SVG files", value = FALSE),
+
+                          # download button for PDF (and svg) raw
+                          downloadButton("download_pdf_raw", "Download Plots Raw Data"),
+
+                          # download button for PDF (and svg) raw pre-processed
+                          downloadButton("download_pdf_raw_pre", "Download Plots Raw Data Pre-Processed"),
+
+                          # download button for PDF (and svg) normalized
+                          downloadButton("download_pdf_norm", "Download Plots Normalized Data"),
+
+                          # only for local mode: manual downloads
+                          div(
+                            id = "local-content-2",
+                            # download plots raw - manually
+                            checkboxInput(inputId = "save_plots_raw", div(icon("star"), "Manually: Save plots for raw data"), value = FALSE),
+                            textOutput("saving_plots_raw"),
+
+                            conditionalPanel(
+                              condition = "input.save_plots_raw == true",
+                              textInput(inputId = "filename_raw", label = "Optionally: Your desired file name and plot title:"),
+                              textInput(inputId = "dir_raw", label = "Optionally: Your desired directory path:", placeholder = "current working directory"),
+                              actionButton(inputId = "save_pdf_raw", label = "Submit"),
+                              verbatimTextOutput("pdf_path_raw")
+                            ),
+
+                            # download plots raw pre-processed - manually
+                            checkboxInput(inputId = "save_plots_raw_pre", div(icon("star"), "Manually: Save plots for raw data pre-processed"), value = FALSE),
+                            textOutput("saving_plots_raw_pre"),
+
+                            conditionalPanel(
+                              condition = "input.save_plots_raw_pre == true",
+                              textInput(inputId = "filename_raw_pre", label = "Optionally: Your desired file name and plot title:"),
+                              textInput(inputId = "dir_raw_pre", label = "Optionally: Your desired directory path:", placeholder = "current working directory"),
+                              actionButton(inputId = "save_pdf_raw_pre", label = "Submit"),
+                              verbatimTextOutput("pdf_path_raw_pre")
+                            ),
+
+                            # download plots normalized - manually
+                            checkboxInput(inputId = "save_plots_norm", div(icon("star"), "Manually: Save plots for normalized data"), value = FALSE),
+                            textOutput("saving_plots_norm"),
+
+                            conditionalPanel(
+                              condition = "input.save_plots_norm == true",
+                              textInput(inputId = "filename_norm", label = "Optionally: Your desired file name and plot title:"),
+                              textInput(inputId = "dir_norm", label = "Optionally: Your desired directory path:", placeholder = "current working directory"),
+                              actionButton(inputId = "save_pdf_norm", label = "Submit"),
+                              verbatimTextOutput("pdf_path_norm")
+                            ),
                           ),
-                        ),
-
-                        )
+                          )
+                 ),
                ),
-
              ),
       # right tab
       tabPanel("View Plots",
-               fluidRow(
-                 # note: both column widths as 6 instead 4 makes them fill the whole space of page, but plots have not correct height:width ratio then
-                 # left - raw
-                 column(4,
-                        div(
-                          h3("Plots of Raw Data", style = "font-size: 20px; font-weight:750; color: darkblue;"),
-                          class = "title-div"
-                        ),
-                        hr(class = "title-hr"),  # horizontal line
+               div(class = "fixed-height",
+                 fluidRow(
+                   # note: both column widths as 6 instead 4 makes them fill the whole space of page, but plots have not correct height:width ratio then
+                   # left - raw
+                   column(4,
+                          div(
+                            h3("Plots of Raw Data", style = "font-size: 20px; font-weight:750; color: darkblue;"),
+                            class = "title-div"
+                          ),
+                          hr(class = "title-hr"),  # horizontal line
 
-                        # show labels parameter for PCA labels
-                        checkboxInput(inputId = "show_labels_raw", label = "Show labels inside PCA plot", value = FALSE),
+                          # show labels parameter for PCA labels
+                          checkboxInput(inputId = "show_labels_raw", label = "Show labels inside PCA plot", value = FALSE),
 
-                        # button for showing plots raw data
-                        actionButton(inputId = "show_plots_raw", label = "Show plots of raw data"),
-                        div(style = "height: 20px;"),  # Add 20px of space
+                          # button for showing plots raw data
+                          actionButton(inputId = "show_plots_raw", label = "Show plots of raw data"),
+                          div(style = "height: 20px;"),  # Add 20px of space
 
-                        plotOutput("plot1_raw"),
-                        br(),
-                        plotOutput("plot2_raw"),
-                        br(),
-                        plotOutput("plot3_raw"),
-                        br(),
-                        plotOutput("plot4_raw"),
-                        br(),
+                          plotOutput("plot1_raw"),
+                          br(),
+                          plotOutput("plot2_raw"),
+                          br(),
+                          plotOutput("plot3_raw"),
+                          br(),
+                          plotOutput("plot4_raw"),
+                          br(),
 
-                        textOutput("score_title_raw"),
-                        textOutput("score_raw"),
-                        ),
-                 # middle - raw pre-processed
-                 column(4,
-                        div(
-                          h3("Plots of Raw Data Pre-Processed", style = "font-size: 20px; font-weight:750; color: darkblue;"),
-                          class = "title-div"
-                        ),
-                        hr(class = "title-hr"),  # horizontal line
+                          textOutput("score_title_raw"),
+                          textOutput("score_raw"),
+                          ),
+                   # middle - raw pre-processed
+                   column(4,
+                          div(
+                            h3("Plots of Raw Data Pre-Processed", style = "font-size: 20px; font-weight:750; color: darkblue;"),
+                            class = "title-div"
+                          ),
+                          hr(class = "title-hr"),  # horizontal line
 
-                        # show labels parameter for PCA labels
-                        checkboxInput(inputId = "show_labels_raw_pre", label = "Show labels inside PCA plot", value = FALSE),
+                          # show labels parameter for PCA labels
+                          checkboxInput(inputId = "show_labels_raw_pre", label = "Show labels inside PCA plot", value = FALSE),
 
-                        # button for showing plots raw data pre-processed
-                        actionButton(inputId = "show_plots_raw_pre", label = "Show plots of raw data pre-processed"),
-                        div(style = "height: 20px;"),  # Add 20px of space
+                          # button for showing plots raw data pre-processed
+                          actionButton(inputId = "show_plots_raw_pre", label = "Show plots of raw data pre-processed"),
+                          div(style = "height: 20px;"),  # Add 20px of space
 
-                        plotOutput("plot1_raw_pre"),
-                        br(),
-                        plotOutput("plot2_raw_pre"),
-                        br(),
-                        plotOutput("plot3_raw_pre"),
-                        br(),
-                        plotOutput("plot4_raw_pre"),
-                        br(),
+                          plotOutput("plot1_raw_pre"),
+                          br(),
+                          plotOutput("plot2_raw_pre"),
+                          br(),
+                          plotOutput("plot3_raw_pre"),
+                          br(),
+                          plotOutput("plot4_raw_pre"),
+                          br(),
 
-                        textOutput("score_title_raw_pre"),
-                        textOutput("score_raw_pre"),
-                        ),
-                 # right - normalized
-                 column(4,
-                        div(
-                          h3("Plots of Normalized Data", style = "font-size: 20px; font-weight:750; color: darkblue;"),
-                          class = "title-div"
-                        ),
-                        hr(class = "title-hr"),  # horizontal line
+                          textOutput("score_title_raw_pre"),
+                          textOutput("score_raw_pre"),
+                          ),
+                   # right - normalized
+                   column(4,
+                          div(
+                            h3("Plots of Normalized Data", style = "font-size: 20px; font-weight:750; color: darkblue;"),
+                            class = "title-div"
+                          ),
+                          hr(class = "title-hr"),  # horizontal line
 
-                        # show labels parameter for PCA labels
-                        checkboxInput(inputId = "show_labels_norm", label = "Show labels inside PCA plot", value = FALSE),
+                          # show labels parameter for PCA labels
+                          checkboxInput(inputId = "show_labels_norm", label = "Show labels inside PCA plot", value = FALSE),
 
-                        # button for showing plots normalized
-                        actionButton(inputId = "show_plots_norm", label = "Show plots of normalized data"),
-                        div(style = "height: 20px;"),  # Add 20px of space
+                          # button for showing plots normalized
+                          actionButton(inputId = "show_plots_norm", label = "Show plots of normalized data"),
+                          div(style = "height: 20px;"),  # Add 20px of space
 
-                        plotOutput("plot1_norm"),
-                        br(),
-                        plotOutput("plot2_norm"),
-                        br(),
-                        plotOutput("plot3_norm"),
-                        br(),
-                        plotOutput("plot4_norm"),
-                        br(),
+                          plotOutput("plot1_norm"),
+                          br(),
+                          plotOutput("plot2_norm"),
+                          br(),
+                          plotOutput("plot3_norm"),
+                          br(),
+                          plotOutput("plot4_norm"),
+                          br(),
 
-                        textOutput("score_title_norm"),
-                        textOutput("score_norm"),
-                        ),
+                          textOutput("score_title_norm"),
+                          textOutput("score_norm"),
+                          ),
 
+                 ),
                ),
-
              )
       )
 
