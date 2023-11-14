@@ -696,6 +696,8 @@ server <- function(input, output, session) {
       } else {
         df <- read.table(inFile$datapath, header = TRUE, sep = "\t", stringsAsFactors = FALSE)
       }
+      # important: same as in rowwisenorm package, replace all non-letter and non-number with a dot (safety)
+      colnames(df) <- gsub("[^A-Za-z0-9]", ".", colnames(df))  # - otherwise column names do not match
       return(df)
     }
 
