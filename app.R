@@ -159,6 +159,7 @@ ui <- fluidPage(
       }
     ')),
 
+
     # fixed position of the title tab titles, and fixed width of view plots
     tags$head(
       tags$style(
