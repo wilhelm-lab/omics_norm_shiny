@@ -73,7 +73,6 @@ ui <- fluidPage(
     tags$style(HTML("#reverseCheckbox { color: green; }")),
     tags$style(HTML("#contaminantCheckbox { color: green; }")),
 
-
     # background
     # tags$style(HTML('
     #   body {
@@ -160,16 +159,21 @@ ui <- fluidPage(
       }
     ')),
 
-    # fixed position of the title and tab titles
+    # fixed position of the title tab titles, and fixed width of view plots
     tags$head(
       tags$style(
         HTML("
-           /* set the height of the tab containers */
-           .fixed-height {
+           .fixed-height {  /* used for first two tabs height */
               height: 80vh;  /* set height as 80% viewerport height (adjusted to the window) */
               overflow-y: auto;
               overflow-x: hidden;  /* no horizontal scroll */
-            }
+           }
+           .fixed-height-width {  /* used for third tab height and width */
+              height: 80vh;  /* set height as 80% viewerport height (adjusted to the window) */
+              width: 1500px;  /* fixed width */
+              overflow-y: auto;
+              overflow-x: hidden;
+           }
            /* fix the position of the title */
            .fixed-title {
               position: sticky;
@@ -179,6 +183,9 @@ ui <- fluidPage(
            ")
       )
     ),
+
+    # widths of view plots columns
+    tags$style(HTML(".view-plots-column { width: 500px; }")),
 
     # Application title - fixed on top of app
     div(class = "fixed-title",
@@ -541,11 +548,11 @@ ui <- fluidPage(
              ),
       # right tab
       tabPanel("View Plots",
-               div(class = "fixed-height",
+               div(class = "fixed-height-width",
                  fluidRow(
                    # note: both column widths as 6 instead 4 makes them fill the whole space of page, but plots have not correct height:width ratio then
                    # left - raw
-                   column(4,
+                   column(4, class = "view-plots-column",
                           div(
                             h3("Plots of Raw Data", style = "font-size: 20px; font-weight:750; color: darkblue;"),
                             class = "title-div"
@@ -559,6 +566,10 @@ ui <- fluidPage(
                           actionButton(inputId = "show_plots_raw", label = "Show plots of raw data"),
                           div(style = "height: 20px;"),  # Add 20px of space
 
+                          textOutput("score_title_raw"),
+                          textOutput("score_raw"),
+                          br(),
+
                           plotOutput("plot1_raw"),
                           br(),
                           plotOutput("plot2_raw"),
@@ -568,11 +579,9 @@ ui <- fluidPage(
                           plotOutput("plot4_raw"),
                           br(),
 
-                          textOutput("score_title_raw"),
-                          textOutput("score_raw"),
                           ),
                    # middle - raw pre-processed
-                   column(4,
+                   column(4, class = "view-plots-column",
                           div(
                             h3("Plots of Raw Data Pre-Processed", style = "font-size: 20px; font-weight:750; color: darkblue;"),
                             class = "title-div"
@@ -586,6 +595,10 @@ ui <- fluidPage(
                           actionButton(inputId = "show_plots_raw_pre", label = "Show plots of raw data pre-processed"),
                           div(style = "height: 20px;"),  # Add 20px of space
 
+                          textOutput("score_title_raw_pre"),
+                          textOutput("score_raw_pre"),
+                          br(),
+
                           plotOutput("plot1_raw_pre"),
                           br(),
                           plotOutput("plot2_raw_pre"),
@@ -595,11 +608,9 @@ ui <- fluidPage(
                           plotOutput("plot4_raw_pre"),
                           br(),
 
-                          textOutput("score_title_raw_pre"),
-                          textOutput("score_raw_pre"),
                           ),
                    # right - normalized
-                   column(4,
+                   column(4, class = "view-plots-column",
                           div(
                             h3("Plots of Normalized Data", style = "font-size: 20px; font-weight:750; color: darkblue;"),
                             class = "title-div"
@@ -613,6 +624,10 @@ ui <- fluidPage(
                           actionButton(inputId = "show_plots_norm", label = "Show plots of normalized data"),
                           div(style = "height: 20px;"),  # Add 20px of space
 
+                          textOutput("score_title_norm"),
+                          textOutput("score_norm"),
+                          br(),
+
                           plotOutput("plot1_norm"),
                           br(),
                           plotOutput("plot2_norm"),
@@ -622,8 +637,6 @@ ui <- fluidPage(
                           plotOutput("plot4_norm"),
                           br(),
 
-                          textOutput("score_title_norm"),
-                          textOutput("score_norm"),
                           ),
 
                  ),
