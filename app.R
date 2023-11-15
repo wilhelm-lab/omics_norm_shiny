@@ -279,15 +279,6 @@ ui <- fluidPage(
                           uiOutput("reverseCheckbox"),
                           uiOutput("contaminantCheckbox"),
 
-                          # div(
-                          #   style = "background-color: lightblue; padding: 10px;",  # Adjust padding as needed
-                          #   fluidRow(
-                          #     uiOutput("onlyBySiteCheckbox"),
-                          #     uiOutput("reverseCheckbox"),
-                          #     uiOutput("contaminantCheckbox")
-                          #   )
-                          # ),
-
                           # log2
                           conditionalPanel(
                             condition = "input.method != 'VST' ",
@@ -568,13 +559,13 @@ ui <- fluidPage(
                           actionButton(inputId = "show_plots_raw", label = "Show plots of raw data"),
                           div(style = "height: 20px;"),  # Add 20px of space
 
-                          plotOutput("plot1_raw", width = "100%", height = "auto"),
+                          plotOutput("plot1_raw"),
                           br(),
-                          plotOutput("plot2_raw", width = "100%"),
+                          plotOutput("plot2_raw"),
                           br(),
-                          plotOutput("plot3_raw", width = "100%"),
+                          plotOutput("plot3_raw"),
                           br(),
-                          plotOutput("plot4_raw", width = "100%"),
+                          plotOutput("plot4_raw"),
                           br(),
 
                           textOutput("score_title_raw"),
@@ -595,13 +586,13 @@ ui <- fluidPage(
                           actionButton(inputId = "show_plots_raw_pre", label = "Show plots of raw data pre-processed"),
                           div(style = "height: 20px;"),  # Add 20px of space
 
-                          plotOutput("plot1_raw_pre", width = "100%"),
+                          plotOutput("plot1_raw_pre"),
                           br(),
-                          plotOutput("plot2_raw_pre", width = "100%"),
+                          plotOutput("plot2_raw_pre"),
                           br(),
-                          plotOutput("plot3_raw_pre", width = "100%"),
+                          plotOutput("plot3_raw_pre"),
                           br(),
-                          plotOutput("plot4_raw_pre", width = "100%"),
+                          plotOutput("plot4_raw_pre"),
                           br(),
 
                           textOutput("score_title_raw_pre"),
@@ -622,13 +613,13 @@ ui <- fluidPage(
                           actionButton(inputId = "show_plots_norm", label = "Show plots of normalized data"),
                           div(style = "height: 20px;"),  # Add 20px of space
 
-                          plotOutput("plot1_norm", width = "100%"),
+                          plotOutput("plot1_norm"),
                           br(),
-                          plotOutput("plot2_norm", width = "100%"),
+                          plotOutput("plot2_norm"),
                           br(),
-                          plotOutput("plot3_norm", width = "100%"),
+                          plotOutput("plot3_norm"),
                           br(),
-                          plotOutput("plot4_norm", width = "100%"),
+                          plotOutput("plot4_norm"),
                           br(),
 
                           textOutput("score_title_norm"),
