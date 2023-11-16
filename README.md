@@ -2,7 +2,9 @@
 R Shiny Application for Omics Data Normalization 
 
 **Description:**
-This is a R Shiny Application which allows omics data to be uploaded and normalized. The application offers some pre-processing steps as well as the ability to view and download the normalized data. More than that, the results can also be displayed in the form of plots. The plots can also be downloaded as a PDF file and SVG files.
+This is an R Shiny Application which allows omics data to be uploaded and normalized. The application offers some pre-processing steps as well as the ability to view and download the normalized data. More than that, the results can also be displayed in the form of plots. The plots can also be downloaded as a PDF file and SVG files.
+
+The available normalization methods include row-wise normalization, total sum normalization, VST, VSN, and quantile normalization.
 
 **Usage:**
 
@@ -19,3 +21,9 @@ Rscript app.R local
 ```
 
 **Important:** This is only recommended in case the application is used locally.
+
+**Description more detailed:**
+The application is divided into three tabs.
+1. First, there is a tab that includes the upload of data and the settings. In this place, the data can be processed, and the normalization can be performed. 
+2. Following this, there is a tab allowing the user to have a preview of the normalized values, download the normalized data, and download plots of the raw data as well as plots of the normalized data. 
+3. The third tab can be used to directly view the plots inside the shiny app. This symbolizes an easy way to determine whether the normalization helped reduce batch effects in comparison with the raw data.
