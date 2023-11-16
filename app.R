@@ -890,125 +890,131 @@ server <- function(input, output, session) {
 
     # important: assign values for global variables with <<- and not <-
     observeEvent(input$process, {
-      # set empty
-      lowest_level_df <<- data.frame()
-      exp_design <<- data.frame()
-      additional_cols <<- data.frame()
-      lowest_level_norm <<- data.frame()
-      lowest_level_df_pre <<- data.frame()
+      withProgress(
+        message = 'Processing data...',
+        detail = 'This may take a moment...',
+        value = 0, {
+          # set empty
+          lowest_level_df <<- data.frame()
+          exp_design <<- data.frame()
+          additional_cols <<- data.frame()
+          lowest_level_norm <<- data.frame()
+          lowest_level_df_pre <<- data.frame()
 
-      pca_colors <<- character(0)  # Reset pca_colors
-      pca_symbols <<- character(0) # Reset pca_symbols
+          pca_colors <<- character(0)  # Reset pca_colors
+          pca_symbols <<- character(0) # Reset pca_symbols
 
-      # set any fields that show results empty
-      output$process_status <- renderUI({
-        HTML('')
-      })
-      output$normalize_row_warning <- renderText({ })  # warning of normalize_row when no valid refs
-      output$data_output <- renderUI({ })  # show data field
-      output$show_data_note <- renderText({ })  # show data note
-      output$plot1_raw <- renderUI({ })
-      output$plot2_raw <- renderUI({ })
-      output$plot3_raw <- renderUI({ })
-      output$plot4_raw <- renderUI({ })
-      output$plot1_raw_pre <- renderUI({ })
-      output$plot2_raw_pre <- renderUI({ })
-      output$plot3_raw_pre <- renderUI({ })
-      output$plot4_raw_pre <- renderUI({ })
-      output$plot1_norm <- renderUI({ })
-      output$plot2_norm <- renderUI({ })
-      output$plot3_norm <- renderUI({ })
-      output$plot4_norm <- renderUI({ })
-      output$score_title_raw <- renderText({ })
-      output$score_raw <- renderText({ })
-      output$score_title_raw_pre <- renderText({ })
-      output$score_raw_pre <- renderText({ })
-      output$score_title_norm <- renderText({ })
-      output$score_norm <- renderText({ })
-
-      return_list <- readin()
-      if (! is.null(return_list)){
-        lowest_level_df <<- return_list[["lowest_level_df"]]  # raw on lowest level but feature-filtered and ID column -> further used in pre-processing
-        exp_design <<- return_list[["exp_design"]]
-        additional_cols <<- return_list[["additional_cols"]]
-
-        pca_colors <<- return_list[["pca_colors"]]  # used for batches in PCA and heatmap
-        pca_symbols <<- return_list[["pca_symbols"]]  # used for conditions in PCA
-
-        # change the batch colors in case enough colors were manually set by the user
-        batch_colors_manually_set <- input$batch_colors_manually
-        number_batches <- ncol(exp_design) -1
-        # when correct number of colors are manually set, take them
-        if (length(batch_colors_manually_set) == number_batches){
-          pca_colors <<- batch_colors_manually_set
-          output$batch_colors_manually_note <- renderText({ })  # empty the note
-        }
-        else if (length(batch_colors_manually_set) > number_batches){
-          # when more are set, take the first ones of them until they are enough
-          pca_colors <<- batch_colors_manually_set[1:number_batches]
-          output$batch_colors_manually_note <- renderText({
-            paste("There need to be ", number_batches, " colors set. The first ", number_batches,
-                  " colors are used.", sep = "")
+          # set any fields that show results empty
+          output$process_status <- renderUI({
+            HTML('')
           })
-        }
-        else {  # else use the automatic generated colors
-          output$batch_colors_manually_note <- renderText({
-            paste("There need to be ", number_batches, " colors set. Automatically generated colors are used.")
-          })
-        }
+          output$normalize_row_warning <- renderText({ })  # warning of normalize_row when no valid refs
+          output$data_output <- renderUI({ })  # show data field
+          output$show_data_note <- renderText({ })  # show data note
+          output$plot1_raw <- renderUI({ })
+          output$plot2_raw <- renderUI({ })
+          output$plot3_raw <- renderUI({ })
+          output$plot4_raw <- renderUI({ })
+          output$plot1_raw_pre <- renderUI({ })
+          output$plot2_raw_pre <- renderUI({ })
+          output$plot3_raw_pre <- renderUI({ })
+          output$plot4_raw_pre <- renderUI({ })
+          output$plot1_norm <- renderUI({ })
+          output$plot2_norm <- renderUI({ })
+          output$plot3_norm <- renderUI({ })
+          output$plot4_norm <- renderUI({ })
+          output$score_title_raw <- renderText({ })
+          output$score_raw <- renderText({ })
+          output$score_title_raw_pre <- renderText({ })
+          output$score_raw_pre <- renderText({ })
+          output$score_title_norm <- renderText({ })
+          output$score_norm <- renderText({ })
 
-        # change the condition symbols the same way
-        condition_symbols_manually_set <- input$condition_symbols_manually
-        condition_symbols_manually_set <- as.numeric(condition_symbols_manually_set)  # important: make entry numeric
-        number_conds <- nrow(exp_design)
-        # when correct number of symbols are manually set, take them
-        if (length(condition_symbols_manually_set) == number_conds){
-          pca_symbols <<- condition_symbols_manually_set
-          output$condition_symbols_manually_note <- renderText({ })  # empty the note
-        }
-        else if (length(condition_symbols_manually_set) > number_conds){
-          # when more are set, take the first ones of them until they are enough
-          pca_symbols <<- condition_symbols_manually_set[1:number_conds]
-          output$condition_symbols_manually_note <- renderText({
-            paste("There need to be ", number_conds, " symbols set. The first ", number_conds,
-                  " symbols are used.", sep = "")
-          })
-        }
-        else {  # else use the automatic generated symbols
-          output$condition_symbols_manually_note <- renderText({
-            paste("There need to be ", number_conds, " symbols set. Automatically generated symbols are used.")
-          })
-        }
+          return_list <- readin()
+          if (! is.null(return_list)){
+            lowest_level_df <<- return_list[["lowest_level_df"]]  # raw on lowest level but feature-filtered and ID column -> further used in pre-processing
+            exp_design <<- return_list[["exp_design"]]
+            additional_cols <<- return_list[["additional_cols"]]
 
-        # completely raw data with all columns  (no ID column, raw is never needed but for plot comparison)
-        lowest_level_df_raw <<- uploaded_data()
-        # reduce to lowest level
-        lowest_level_df_raw <<- lowest_level_df_raw[colnames(lowest_level_df_raw) %in% colnames(lowest_level_df)]
+            pca_colors <<- return_list[["pca_colors"]]  # used for batches in PCA and heatmap
+            pca_symbols <<- return_list[["pca_symbols"]]  # used for conditions in PCA
 
-        # pre-processing (included in each normalization) and normalization
-        if(input$method == "row-wise-normalization"){
-          lowest_level_norm <<- normalize_rowwise(lowest_level_df, exp_design)
-        }
-        else if(input$method == "total-sum"){
-          lowest_level_norm <<- normalize_totalsum(lowest_level_df)
-        }
-        else if(input$method == "VST"){
-          lowest_level_norm <<- normalize_vst(lowest_level_df)
-        }
-        else if(input$method == "VSN"){
-          lowest_level_norm <<- normalize_vsn(lowest_level_df)
-        }
-        else if(input$method == "quantile-normalization"){
-          lowest_level_norm <<- normalize_quantile(lowest_level_df)
-        }
+            # change the batch colors in case enough colors were manually set by the user
+            batch_colors_manually_set <- input$batch_colors_manually
+            number_batches <- ncol(exp_design) -1
+            # when correct number of colors are manually set, take them
+            if (length(batch_colors_manually_set) == number_batches){
+              pca_colors <<- batch_colors_manually_set
+              output$batch_colors_manually_note <- renderText({ })  # empty the note
+            }
+            else if (length(batch_colors_manually_set) > number_batches){
+              # when more are set, take the first ones of them until they are enough
+              pca_colors <<- batch_colors_manually_set[1:number_batches]
+              output$batch_colors_manually_note <- renderText({
+                paste("There need to be ", number_batches, " colors set. The first ", number_batches,
+                      " colors are used.", sep = "")
+              })
+            }
+            else {  # else use the automatic generated colors
+              output$batch_colors_manually_note <- renderText({
+                paste("There need to be ", number_batches, " colors set. Automatically generated colors are used.")
+              })
+            }
 
-        # status message
-        process_status <- renderUI({
-          HTML('<i class="fa fa-check-circle" style="color: green;"></i> Data Ready!')
-        })
-        output$process_status <- process_status
+            # change the condition symbols the same way
+            condition_symbols_manually_set <- input$condition_symbols_manually
+            condition_symbols_manually_set <- as.numeric(condition_symbols_manually_set)  # important: make entry numeric
+            number_conds <- nrow(exp_design)
+            # when correct number of symbols are manually set, take them
+            if (length(condition_symbols_manually_set) == number_conds){
+              pca_symbols <<- condition_symbols_manually_set
+              output$condition_symbols_manually_note <- renderText({ })  # empty the note
+            }
+            else if (length(condition_symbols_manually_set) > number_conds){
+              # when more are set, take the first ones of them until they are enough
+              pca_symbols <<- condition_symbols_manually_set[1:number_conds]
+              output$condition_symbols_manually_note <- renderText({
+                paste("There need to be ", number_conds, " symbols set. The first ", number_conds,
+                      " symbols are used.", sep = "")
+              })
+            }
+            else {  # else use the automatic generated symbols
+              output$condition_symbols_manually_note <- renderText({
+                paste("There need to be ", number_conds, " symbols set. Automatically generated symbols are used.")
+              })
+            }
 
-      }
+            # completely raw data with all columns  (no ID column, raw is never needed but for plot comparison)
+            lowest_level_df_raw <<- uploaded_data()
+            # reduce to lowest level
+            lowest_level_df_raw <<- lowest_level_df_raw[colnames(lowest_level_df_raw) %in% colnames(lowest_level_df)]
+
+            # pre-processing (included in each normalization) and normalization
+            if(input$method == "row-wise-normalization"){
+              lowest_level_norm <<- normalize_rowwise(lowest_level_df, exp_design)
+            }
+            else if(input$method == "total-sum"){
+              lowest_level_norm <<- normalize_totalsum(lowest_level_df)
+            }
+            else if(input$method == "VST"){
+              lowest_level_norm <<- normalize_vst(lowest_level_df)
+            }
+            else if(input$method == "VSN"){
+              lowest_level_norm <<- normalize_vsn(lowest_level_df)
+            }
+            else if(input$method == "quantile-normalization"){
+              lowest_level_norm <<- normalize_quantile(lowest_level_df)
+            }
+
+            # status message
+            process_status <- renderUI({
+              HTML('<i class="fa fa-check-circle" style="color: green;"></i> Data Ready!')
+            })
+            output$process_status <- process_status
+
+          }
+        }
+      )
     })
 
 
