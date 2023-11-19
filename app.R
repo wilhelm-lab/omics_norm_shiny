@@ -20,6 +20,7 @@ library(pheatmap)
 library(edgeR)  # for VST
 library(lumi)  # for VSN
 library(preprocessCore)  # for Quantile normalization
+library(sva)  # for ComBat
 
 library(shinyjs)
 
@@ -267,7 +268,8 @@ ui <- fluidPage(
                           selectInput(inputId = "method", label = "Method",
                                       choices = c("row-wise-normalization" = "row-wise-normalization",
                                                   "total-sum" = "total-sum", "VST" = "VST", "VSN" = "VSN",
-                                                  "quantile-normalization" = "quantile-normalization")),
+                                                  "quantile-normalization" = "quantile-normalization",
+                                                  "ComBat" = "ComBat")),
                           textOutput("selected_method"),
                           # Preprocessing possible for all methods: - but log2 not for VST allowed (no negative values allowed)
                           div(
@@ -984,7 +986,7 @@ server <- function(input, output, session) {
               })
             }
 
-            # completely raw data with all columns  (no ID column, raw is never needed but for plot comparison)
+            # completely raw data with all columns  (no ID column, no feature filtering, raw is never needed but for plot comparison)
             lowest_level_df_raw <<- uploaded_data()
             # reduce to lowest level
             lowest_level_df_raw <<- lowest_level_df_raw[colnames(lowest_level_df_raw) %in% colnames(lowest_level_df)]
@@ -1004,6 +1006,9 @@ server <- function(input, output, session) {
             }
             else if(input$method == "quantile-normalization"){
               lowest_level_norm <<- normalize_quantile(lowest_level_df)
+            }
+            else if(input$method == "ComBat"){
+              lowest_level_norm <<- normalize_combat(lowest_level_df, exp_design)
             }
 
             # status message
@@ -1128,6 +1133,46 @@ server <- function(input, output, session) {
 
       return(quantile_normalized)
 
+    }
+
+    # NORMALIZATION ComBat
+    normalize_combat <- function(lowest_level_df, exp_design){
+      combat_data <- data.frame()
+
+      # preprocessing
+      lowest_level_df_pre <<- preprocess(lowest_level_df, do_log = input$log2_t, do_filter = input$filterrows,
+                                         do_sum = input$sum_norm, do_median = input$median_norm)
+
+      ms_data <- lowest_level_df_pre[! colnames(lowest_level_df_pre) %in% "row.number"]
+
+      # impute missing values with the mean of each column
+      ms_data_imputed <- apply(ms_data, 2, function(x) ifelse(is.na(x), mean(x, na.rm = TRUE), x))
+
+      # convert to a numeric matrix
+      ms_data_matrix <- as.matrix(ms_data_imputed)
+
+      # get the order of conditions and batches based on the exp_design and order of data columns
+      batches <- c()
+      conditions <- c()
+      # -> check for each column name which batch and which condition it is
+      for(col in colnames(ms_data_matrix)){
+        for (i in 1:nrow(exp_design)){
+          for(j in 2:ncol(exp_design)){
+            if (exp_design[i, j] == col){
+              batches <- append(batches, j-1)  # batch number
+              conditions <- append(conditions, i)  # condition number
+            }
+          }
+        }
+      }
+
+      # ComBat from sva package
+      combat_data <- ComBat(ms_data_matrix, batch = as.factor(batches), mod = as.factor(conditions))
+      # convert to data frame
+      combat_data <- as.data.frame(combat_data)
+
+      combat_data <- cbind("row.number" = lowest_level_df_pre$row.number, combat_data)  # back append ID column
+      return(combat_data)
     }
 
 
