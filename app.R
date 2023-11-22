@@ -381,7 +381,7 @@ ui <- fluidPage(
                           # parameter center for M-ComBat
                           conditionalPanel(
                             condition = "input.method == 'M-ComBat' ",
-                            numericInput("m.combat_center", label = "Center at this batch number:", value = 1, step = 1),
+                            numericInput("m.combat_center", label = "Center at this batch number:", value = 1, step = 1, min = 1),
                             textOutput("m.combat_center_note")
                           ),
 
@@ -682,6 +682,8 @@ server <- function(input, output, session) {
     lowest_level_df_pre <- data.frame()  # raw data pre-processed (pre-processed lowest_level_df)
     pca_colors <- c()
     pca_symbols <- c()
+    max_choices_batches <- 1
+    max_choices_conds <- 1
 
     output$selected_method <- renderText({
       paste("Your selected method:", input$method)
@@ -697,9 +699,8 @@ server <- function(input, output, session) {
 
     # make note reactive
     m.combat_note_text <- reactiveVal(
-      "Please select the batch number based on the order inside the experimental design.
-       If the selected number is not valid, batch 1 will be used as default."
-      )
+      "Please select the batch number based on the order inside the experimental design."
+    )
 
     output$m.combat_center_note <- renderText({
       m.combat_note_text()
@@ -722,7 +723,7 @@ server <- function(input, output, session) {
       plot_of_symbols()
     })
 
-    # important: called to get completely raw data frame (without any feature filtering done)
+    # important: called to previously get completely raw data frame (without any feature filtering done)
     uploaded_data <- function(){
       req(input$data)
       inFile <- input$data
@@ -737,10 +738,20 @@ server <- function(input, output, session) {
       return(df)
     }
 
+    # called to previously read in uploaded experimental design
+    uploaded_design <- function(){
+      req(input$exp_design)
+      design <- read.table(input$exp_design$datapath, header = FALSE, sep = "\t", na.strings = "NaN")
+      design[is.na(design)] <- ""
+      design <- design[, !apply(design, 2, function(x) all(grepl("^\\s*$", x)))]
+      design <- as.data.frame(apply(design, 2, function(x) gsub("[^A-Za-z0-9]", ".", trimws(x))))
+      return(design)
+    }
+
     # Reactive value to store available features
     available_features <- reactiveVal(NULL)
 
-    # Clear the available features when a new file is uploaded
+    # new data uploaded: Clear the available features when a new file is uploaded
     observeEvent(input$data, {
       available_features(NULL)
       # clear status message of feature filtering
@@ -751,8 +762,25 @@ server <- function(input, output, session) {
       output$process_status <- renderUI({
         HTML('')
       })
-      # clear note of the choice for batch colors
-      output$batch_colors_manually_note <- renderText({ })
+    })
+
+    # new design uploaded:
+    observeEvent(input$exp_design, {
+      # clear status message of process button
+      output$process_status <- renderUI({
+        HTML('')
+      })
+
+      design <- uploaded_design
+      max_choices_batches <<- ncol(design) -1
+      max_choices_conds <<- nrow(design)
+      # update information how many colors and symbols need to be set
+      output$batch_colors_manually_note <- renderText({
+        paste("There need to be ", max_choices_batches, " colors set.")
+      })
+      output$condition_symbols_manually_note <- renderText({
+        paste("There need to be ", max_choices_conds, " symbols set.")
+      })
     })
 
     # when button to search for features is clicked
@@ -828,6 +856,43 @@ server <- function(input, output, session) {
           checkboxInput("contaminant", "Contaminant", value = FALSE),
           tags$script(HTML("$(document).ready(function() { $('input#contaminant').parent().hide(); });"))
         )
+      }
+    })
+
+
+    # using uploaded design file to set max number of choices for colors and symbols, and for center of M-ComBat
+    observe({
+      req(input$exp_design)
+
+      # read the uploaded file
+      design <- uploaded_design()
+
+      # maximum number of choices for batches
+      max_choices_batches <<- ncol(design) -1
+      max_choices_conds <<- nrow(design)
+
+      # whenever more colors/symbols are set than allowed, directly reduce the selected ones
+      if (length(input$batch_colors_manually) > max_choices_batches){
+        updateSelectInput(session, "batch_colors_manually", selected = input$batch_colors_manually[1:max_choices_batches])
+      }
+      if (length(input$condition_symbols_manually) > max_choices_conds){
+        updateSelectInput(session, "condition_symbols_manually", selected = input$condition_symbols_manually[1:max_choices_conds])
+      }
+      updateNumericInput(session, "m.combat_center", max = max_choices_batches)
+    })
+
+    # M-ComBat center: when manually a number is entered, modify to be at most max and at least 1
+    observe({
+      if (!is.null(input$m.combat_center) && !is.na(input$m.combat_center)) {
+        if (input$m.combat_center > max_choices_batches) {
+          updateNumericInput(session, "m.combat_center", value = max_choices_batches)
+        }
+        else if (input$m.combat_center < 1){
+          updateNumericInput(session, "m.combat_center", value = 1)
+        }
+      }
+      else {
+        updateNumericInput(session, "m.combat_center", value = 1)
       }
     })
 
@@ -963,17 +1028,10 @@ server <- function(input, output, session) {
             # when correct number of colors are manually set, take them
             if (length(batch_colors_manually_set) == number_batches){
               pca_colors <<- batch_colors_manually_set
-              output$batch_colors_manually_note <- renderText({ })  # empty the note
+              # TODO use new output for notification, set that one empty at beginning of process click and use that one in else part!
+              output$batch_colors_manually_note <- renderText({ })  # empty the note -> do at beginning when proces clicked
             }
-            else if (length(batch_colors_manually_set) > number_batches){
-              # when more are set, take the first ones of them until they are enough
-              pca_colors <<- batch_colors_manually_set[1:number_batches]
-              output$batch_colors_manually_note <- renderText({
-                paste("There need to be ", number_batches, " colors set. The first ", number_batches,
-                      " colors are used.", sep = "")
-              })
-            }
-            else {  # else use the automatic generated colors
+            else {  # else: too few colors, use the automatic generated colors (too many not possible)
               output$batch_colors_manually_note <- renderText({
                 paste("There need to be ", number_batches, " colors set. Automatically generated colors are used.")
               })
@@ -988,15 +1046,7 @@ server <- function(input, output, session) {
               pca_symbols <<- condition_symbols_manually_set
               output$condition_symbols_manually_note <- renderText({ })  # empty the note
             }
-            else if (length(condition_symbols_manually_set) > number_conds){
-              # when more are set, take the first ones of them until they are enough
-              pca_symbols <<- condition_symbols_manually_set[1:number_conds]
-              output$condition_symbols_manually_note <- renderText({
-                paste("There need to be ", number_conds, " symbols set. The first ", number_conds,
-                      " symbols are used.", sep = "")
-              })
-            }
-            else {  # else use the automatic generated symbols
+            else {  # else: too few symbols, use the automatic generated symbols (too many not possible)
               output$condition_symbols_manually_note <- renderText({
                 paste("There need to be ", number_conds, " symbols set. Automatically generated symbols are used.")
               })
@@ -1228,13 +1278,7 @@ server <- function(input, output, session) {
 
       # center
       center <- input$m.combat_center
-      if (center > ncol(exp_design)-1 | center <= 0){
-        # in case the entered value is greater than there are batches, 0 or negative, use batch 1 as default
-        center <- 1
-        m.combat_note_text("The selected number is not valid. Batch 1 is used as center.")
-      } else {
-        m.combat_note_text(paste("Batch ", center, " is used as center."))
-      }
+      m.combat_note_text(paste("Batch ", center, " is used as center."))
 
       source("M-ComBat.R")  # file that stores M.COMBAT function
       m.combat_data <- M.COMBAT(ms_data_matrix, batch = as.factor(batches), mod = as.factor(conditions),
