@@ -269,7 +269,7 @@ ui <- fluidPage(
                                       choices = c("row-wise-normalization" = "row-wise-normalization",
                                                   "total-sum" = "total-sum", "VST" = "VST", "VSN" = "VSN",
                                                   "quantile-normalization" = "quantile-normalization",
-                                                  "ComBat" = "ComBat")),
+                                                  "ComBat" = "ComBat", "M-ComBat" = "M-ComBat")),
                           textOutput("selected_method"),
                           # Preprocessing possible for all methods: - but log2 not for VST allowed (no negative values allowed)
                           div(
@@ -329,9 +329,9 @@ ui <- fluidPage(
                           checkboxInput(inputId = "median_norm", label = "Median normalize", value = FALSE),
 
 
-                          ### Setups for specific methods: - only for row-wise and total sum
+                          ### Setups for specific methods: - only for row-wise, total sum, and M-Combat
                           conditionalPanel(
-                            condition = "input.method == 'row-wise-normalization' || input.method == 'total-sum' ",
+                            condition = "input.method == 'row-wise-normalization' || input.method == 'total-sum' || input.method == 'M-ComBat' ",
                             div(
                               h3("Method-Specific Setups", style = "font-size: 17px; font-weight:550;"),
                               class = "title-div"
@@ -352,7 +352,7 @@ ui <- fluidPage(
                             textInput(inputId = "refs", label = "Please enter the condition names of the references, separated by a comma:")
                           ),
 
-                          # na.rm - only for row-wise and total-sum (also specifies na.rm in row-wise function)
+                          # na.rm - only for row-wise and total-sum
                           conditionalPanel(
                             condition = "input.method == 'row-wise-normalization' || input.method == 'total-sum' ",
                             checkboxInput(inputId = "na_rm", label = "Exclude NA values inside reference function", value = TRUE),
@@ -366,8 +366,7 @@ ui <- fluidPage(
                             textOutput("selected_refFunc"),
                           ),
 
-
-                          # specific parameter for total sum - only for total-sum
+                          # specific parameters for total sum - only for total-sum
                           conditionalPanel(
                             condition = "input.method == 'total-sum' ",
                             # refFunc
@@ -377,6 +376,13 @@ ui <- fluidPage(
                             checkboxInput(inputId = "norm_sum", label = "Normalize the total sum", value = TRUE),
                             # na.rm - use the same as for row-wise
                             # checkboxInput(inputId = "na_rm_sum", label = "Remove NA values", value = TRUE),
+                          ),
+
+                          # parameter center for M-ComBat
+                          conditionalPanel(
+                            condition = "input.method == 'M-ComBat' ",
+                            numericInput("m.combat_center", label = "Center at this batch number:", value = 1, step = 1),
+                            textOutput("m.combat_center_note")
                           ),
 
                           ### Graphical adjustment
@@ -687,6 +693,16 @@ server <- function(input, output, session) {
 
     output$feature_note <- renderText({
       "Click the button to search for features that can be filtered."
+    })
+
+    # make note reactive
+    m.combat_note_text <- reactiveVal(
+      "Please select the batch number based on the order inside the experimental design.
+       If the selected number is not valid, batch 1 will be used as default."
+      )
+
+    output$m.combat_center_note <- renderText({
+      m.combat_note_text()
     })
 
     plot_of_symbols <- function() {
@@ -1010,6 +1026,9 @@ server <- function(input, output, session) {
             else if(input$method == "ComBat"){
               lowest_level_norm <<- normalize_combat(lowest_level_df, exp_design)
             }
+            else if(input$method == "M-ComBat"){
+              lowest_level_norm <<- normalize_m.combat(lowest_level_df, exp_design)
+            }
 
             # status message
             process_status <- renderUI({
@@ -1168,11 +1187,63 @@ server <- function(input, output, session) {
 
       # ComBat from sva package
       combat_data <- ComBat(ms_data_matrix, batch = as.factor(batches), mod = as.factor(conditions))
+
       # convert to data frame
       combat_data <- as.data.frame(combat_data)
 
       combat_data <- cbind("row.number" = lowest_level_df_pre$row.number, combat_data)  # back append ID column
       return(combat_data)
+    }
+
+    # NORMALIZATION M-ComBat
+    normalize_m.combat <- function(lowest_level_df, exp_design){
+      m.combat_data <- data.frame()
+
+      # preprocessing
+      lowest_level_df_pre <<- preprocess(lowest_level_df, do_log = input$log2_t, do_filter = input$filterrows,
+                                         do_sum = input$sum_norm, do_median = input$median_norm)
+
+      ms_data <- lowest_level_df_pre[! colnames(lowest_level_df_pre) %in% "row.number"]
+
+      # impute missing values with the mean of each column
+      ms_data_imputed <- apply(ms_data, 2, function(x) ifelse(is.na(x), mean(x, na.rm = TRUE), x))
+
+      # convert to a numeric matrix
+      ms_data_matrix <- as.matrix(ms_data_imputed)
+
+      # get the order of conditions and batches based on the exp_design and order of data columns
+      batches <- c()  # same as for ComBat
+      conditions <- c()  # same as for ComBat
+      # -> check for each column name which batch and which condition it is
+      for(col in colnames(ms_data_matrix)){
+        for (i in 1:nrow(exp_design)){
+          for(j in 2:ncol(exp_design)){
+            if (exp_design[i, j] == col){
+              batches <- append(batches, j-1)  # batch number
+              conditions <- append(conditions, i)  # condition number
+            }
+          }
+        }
+      }
+
+      # center
+      center <- input$m.combat_center
+      if (center > ncol(exp_design)-1 | center <= 0){
+        # in case the entered value is greater than there are batches, 0 or negative, use batch 1 as default
+        center <- 1
+        m.combat_note_text("The selected number is not valid. Batch 1 is used as center.")
+      } else {
+        m.combat_note_text(paste("Batch ", center, " is used as center."))
+      }
+
+      source("M-ComBat.R")  # file that stores M.COMBAT function
+      m.combat_data <- M.COMBAT(ms_data_matrix, batch = as.factor(batches), mod = as.factor(conditions),
+                                center = center)
+
+      m.combat_data <- as.data.frame(m.combat_data)
+      m.combat_data <- cbind("row.number" = lowest_level_df_pre$row.number, m.combat_data)  # back append ID column
+
+      return(m.combat_data)
     }
 
 
