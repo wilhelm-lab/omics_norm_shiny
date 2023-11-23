@@ -38,10 +38,14 @@ ui <- fluidPage(
       tags$style(HTML("hr {border-top: 1px solid #000000;}")),  # horizontal line thicker
     ),
 
-    # color of warnings/ errors inside textOutputs
-    tags$head(tags$style("#reading_warning{color: orange;}")),
-    tags$head(tags$style("#reading_error{color: red;}")),
-    tags$head(tags$style("#normalize_row_warning{color: red;}")),
+    # colors & line spacing of warnings/ errors inside notifications
+    tags$head(tags$style("#reading_warning{color: orange; margin-bottom: 20px;")),
+    tags$head(tags$style("#reading_error{color: red; margin-bottom: 20px;}")),
+    tags$head(tags$style("#normalize_row_warning{color: red; margin-bottom: 20px;}")),
+    # colors & line spacing of notifications of colors, symbols, M-ComBat center
+    tags$head(tags$style("#batch_colors_manually_notification{color: darkblue; margin-bottom: 20px;}")),
+    tags$head(tags$style("#condition_symbols_manually_notification{color: darkblue; margin-bottom: 20px;}")),
+    tags$head(tags$style("#m.combat_notification{color: darkblue; margin-bottom: 20px;}")),
 
     # color and thickness of lines subtitles
     tags$style(HTML(".title-hr {
@@ -427,7 +431,7 @@ ui <- fluidPage(
                           # notifications for PCA colors, symbols, and M-ComBat center
                           textOutput("batch_colors_manually_notification"),
                           textOutput("condition_symbols_manually_notification"),
-                          textOutput("m.combat_notification"),
+                          uiOutput("m.combat_notification"),  # ui so that color can be set inside renderUI in server
                          ),
 
                  ),
@@ -704,8 +708,14 @@ server <- function(input, output, session) {
     # make m combat notification reactive (changes whenever m combat function is called)
     m.combat_notification_text <- reactiveVal(NULL)
 
-    output$m.combat_notification <- renderText({
-      m.combat_notification_text()
+    output$m.combat_notification <- renderUI({
+      text_content <- m.combat_notification_text()
+
+      tags$div(
+        id = "m.combat_notification",
+        style = "color: darkblue;",
+        text_content
+      )
     })
 
     plot_of_symbols <- function() {
