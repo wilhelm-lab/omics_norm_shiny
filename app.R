@@ -318,7 +318,6 @@ ui <- fluidPage(
                             condition = "input.sum_norm & input.method != 'total-sum' ", # important: set off for method total-sum (otherwise, when clicked at a different method it still appears)
                             # refFunc
                             selectInput(inputId = "refFunc_sum", label = "Select the reference Function", choices = c("sum" = "sum", "median" = "median")),
-                            textOutput("selected_refFunc_sum_prev"),
                             # norm
                             checkboxInput(inputId = "norm_sum", label = "Normalize the total sum", value = TRUE),
                             # na.rm - this ID only here (needs to work for all methods, the other na_rm is used for total sum and row wise in specific setups)
@@ -343,7 +342,6 @@ ui <- fluidPage(
                           conditionalPanel(
                             condition = "input.method == 'row-wise-normalization' ",
                             checkboxInput(inputId = "active_mode", label = "Manually setting reference channels", value = FALSE),
-                            textOutput("selected_mode"),
                           ),
 
                           # if active is set: input of references - this input is later used for ref parameter
@@ -356,14 +354,12 @@ ui <- fluidPage(
                           conditionalPanel(
                             condition = "input.method == 'row-wise-normalization' || input.method == 'total-sum' ",
                             checkboxInput(inputId = "na_rm", label = "Exclude NA values inside reference function", value = TRUE),
-                            textOutput("selected_na_rm"),
                           ),
 
                           # refFunc - only for row-wise (because other default)
                           conditionalPanel(
                             condition = "input.method == 'row-wise-normalization' ",
                             selectInput(inputId = "refFunc", label = "Select the reference Function", choices = c("median" = "median", "sum" = "sum")),
-                            textOutput("selected_refFunc"),
                           ),
 
                           # specific parameters for total sum - only for total-sum
@@ -371,7 +367,6 @@ ui <- fluidPage(
                             condition = "input.method == 'total-sum' ",
                             # refFunc
                             selectInput(inputId = "refFunc_sum", label = "Select the reference Function", choices = c("sum" = "sum", "median" = "median")),
-                            textOutput("selected_refFunc_sum"),
                             # norm
                             checkboxInput(inputId = "norm_sum", label = "Normalize the total sum", value = TRUE),
                             # na.rm - use the same as for row-wise
@@ -428,6 +423,11 @@ ui <- fluidPage(
                           textOutput("reading_error"),  # handle stop() call inside reading
                           textOutput("reading_warning"),  # handle warning() inside reading
                           textOutput("normalize_row_warning"),  # not valid reference entered
+
+                          # notifications for PCA colors, symbols, and M-ComBat center
+                          textOutput("batch_colors_manually_notification"),
+                          textOutput("condition_symbols_manually_notification"),
+                          textOutput("m.combat_notification"),
                          ),
 
                  ),
@@ -697,13 +697,15 @@ server <- function(input, output, session) {
       "Click the button to search for features that can be filtered."
     })
 
-    # make note reactive
-    m.combat_note_text <- reactiveVal(
-      "Please select the batch number based on the order inside the experimental design."
-    )
-
     output$m.combat_center_note <- renderText({
-      m.combat_note_text()
+      "Please select the batch number based on the order inside the experimental design."
+    })
+
+    # make m combat notification reactive (changes whenever m combat function is called)
+    m.combat_notification_text <- reactiveVal(NULL)
+
+    output$m.combat_notification <- renderText({
+      m.combat_notification_text()
     })
 
     plot_of_symbols <- function() {
@@ -762,6 +764,10 @@ server <- function(input, output, session) {
       output$process_status <- renderUI({
         HTML('')
       })
+      # clear notification section
+      output$batch_colors_manually_notification <- renderText({ })
+      output$condition_symbols_manually_notification <- renderText({ })
+      m.combat_notification_text(NULL)
     })
 
     # new design uploaded:
@@ -770,6 +776,10 @@ server <- function(input, output, session) {
       output$process_status <- renderUI({
         HTML('')
       })
+      # clear notification section
+      output$batch_colors_manually_notification <- renderText({ })
+      output$condition_symbols_manually_notification <- renderText({ })
+      m.combat_notification_text(NULL)
 
       design <- uploaded_design
       max_choices_batches <<- ncol(design) -1
@@ -781,6 +791,9 @@ server <- function(input, output, session) {
       output$condition_symbols_manually_note <- renderText({
         paste("There need to be ", max_choices_conds, " symbols set.")
       })
+
+      # when new/another design uploaded, reset selected value for center as default 1
+      updateNumericInput(session, "m.combat_center", value = 1)
     })
 
     # when button to search for features is clicked
@@ -897,7 +910,7 @@ server <- function(input, output, session) {
     })
 
 
-    # reading of uploaded files
+    # reading of uploaded files by rowwisenorm package
     readin <- function(){  # function makes it possible to control when it is executed explicitly (not as reactive)
       # clear for every new call
       output$reading_warning <- renderText({
@@ -1012,6 +1025,10 @@ server <- function(input, output, session) {
           output$score_raw_pre <- renderText({ })
           output$score_title_norm <- renderText({ })
           output$score_norm <- renderText({ })
+          # notification section
+          output$batch_colors_manually_notification <- renderText({ })
+          output$condition_symbols_manually_notification <- renderText({ })
+          m.combat_notification_text(NULL)
 
           return_list <- readin()
           if (! is.null(return_list)){
@@ -1028,11 +1045,9 @@ server <- function(input, output, session) {
             # when correct number of colors are manually set, take them
             if (length(batch_colors_manually_set) == number_batches){
               pca_colors <<- batch_colors_manually_set
-              # TODO use new output for notification, set that one empty at beginning of process click and use that one in else part!
-              output$batch_colors_manually_note <- renderText({ })  # empty the note -> do at beginning when proces clicked
             }
             else {  # else: too few colors, use the automatic generated colors (too many not possible)
-              output$batch_colors_manually_note <- renderText({
+              output$batch_colors_manually_notification <- renderText({
                 paste("There need to be ", number_batches, " colors set. Automatically generated colors are used.")
               })
             }
@@ -1044,10 +1059,9 @@ server <- function(input, output, session) {
             # when correct number of symbols are manually set, take them
             if (length(condition_symbols_manually_set) == number_conds){
               pca_symbols <<- condition_symbols_manually_set
-              output$condition_symbols_manually_note <- renderText({ })  # empty the note
             }
             else {  # else: too few symbols, use the automatic generated symbols (too many not possible)
-              output$condition_symbols_manually_note <- renderText({
+              output$condition_symbols_manually_notification <- renderText({
                 paste("There need to be ", number_conds, " symbols set. Automatically generated symbols are used.")
               })
             }
@@ -1278,7 +1292,7 @@ server <- function(input, output, session) {
 
       # center
       center <- input$m.combat_center
-      m.combat_note_text(paste("Batch ", center, " is used as center."))
+      m.combat_notification_text(paste("Batch ", center, " was used as center."))
 
       source("M-ComBat.R")  # file that stores M.COMBAT function
       m.combat_data <- M.COMBAT(ms_data_matrix, batch = as.factor(batches), mod = as.factor(conditions),
