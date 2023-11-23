@@ -694,7 +694,7 @@ server <- function(input, output, session) {
     })
 
     output$process_note <- renderText({
-      "Click the button to load the data and perform normalization."
+      "Click the button to load the data, update the settings, and perform normalization."
     })
 
     output$feature_note <- renderText({
@@ -890,7 +890,7 @@ server <- function(input, output, session) {
       # read the uploaded file
       design <- uploaded_design()
 
-      # maximum number of choices for batches
+      # maximum numbers of choices for batches and conditions
       max_choices_batches <<- ncol(design) -1
       max_choices_conds <<- nrow(design)
 
@@ -907,6 +907,8 @@ server <- function(input, output, session) {
     # M-ComBat center: when manually a number is entered, modify to be at most max and at least 1
     observe({
       if (!is.null(input$m.combat_center) && !is.na(input$m.combat_center)) {
+        # convert float to integer
+        updateNumericInput(session, "m.combat_center", value = as.integer(input$m.combat_center))
         if (input$m.combat_center > max_choices_batches) {
           updateNumericInput(session, "m.combat_center", value = max_choices_batches)
         }
