@@ -4,7 +4,7 @@ R Shiny Application for Omics Data Normalization
 **Description:**
 This is an R Shiny Application which allows omics data to be uploaded and normalized. The application offers some pre-processing steps as well as the ability to view and download the normalized data. More than that, the results can also be displayed in the form of plots. The plots can also be downloaded as a PDF file and SVG files.
 
-The available normalization methods include row-wise normalization, total sum normalization, VST, VSN, and quantile normalization.
+The available normalization methods include row-wise normalization, total sum normalization, VST, VSN, quantile normalization, ComBat, and M-ComBat.
 
 **Important for Linux:**
 ```zip.exe``` needs to be specified in the ```PATH``` environment variable.
