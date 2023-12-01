@@ -14,14 +14,14 @@ This can be done by the following line of code in R: ```Sys.setenv("R_ZIPCMD" = 
 **Usage:**
 
 Terminal:
-```
+```Terminal
 Rscript app.R 
 ```
 
 Optional: The parameter 'local' can be added to obtain additional features inside the application.
 
 Terminal:
-```
+```Terminal
 Rscript app.R local 
 ```
 
