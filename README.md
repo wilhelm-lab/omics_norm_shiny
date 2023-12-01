@@ -9,19 +9,22 @@ The available normalization methods include row-wise normalization, total sum no
 **Important for Linux:**
 Add the directory where ```zip.exe``` is located to the system's ```PATH``` variable.
 Alternatively: Specify the path to ```zip.exe``` in the environment variable ```R_ZIPCMD```. 
-This can be done by the following line of code in R: ```Sys.setenv("R_ZIPCMD" = "path/to/zip.exe")```
+This can be done by the following line of code in R: 
+```
+Sys.setenv("R_ZIPCMD" = "path/to/zip.exe")
+```
 
 **Usage:**
 
 Terminal:
-```Terminal
+```
 Rscript app.R 
 ```
 
 Optional: The parameter 'local' can be added to obtain additional features inside the application.
 
 Terminal:
-```Terminal
+```
 Rscript app.R local 
 ```
 
