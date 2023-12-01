@@ -6,6 +6,11 @@ This is an R Shiny Application which allows omics data to be uploaded and normal
 
 The available normalization methods include row-wise normalization, total sum normalization, VST, VSN, and quantile normalization.
 
+**Important for Linux:**
+```zip.exe``` needs to be specified in the ```PATH``` environment variable.
+Or: Specify the path to ```zip.exe``` in the environment variable ```R_ZIPCMD```. 
+E.g., by using: ```Sys.setenv("R_ZIPCMD" = "path/to/zip.exe")```
+
 **Usage:**
 
 Terminal:
