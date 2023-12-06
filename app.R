@@ -351,7 +351,8 @@ ui <- fluidPage(
                           # if active is set: input of references - this input is later used for ref parameter
                           conditionalPanel(
                             condition = "input.active_mode == true & input.method == 'row-wise-normalization' ",  # important: set only for row-wise (otherwise, when clicked at a different method it still appears)
-                            textInput(inputId = "refs", label = "Please enter the condition names of the references, separated by a comma:")
+                            textInput(inputId = "refs", label = "Please enter the condition names of the references, separated by a comma:"),
+                            textOutput("possible_refs_note"),
                           ),
 
                           # na.rm - only for row-wise and total-sum
@@ -791,7 +792,13 @@ server <- function(input, output, session) {
       output$condition_symbols_manually_notification <- renderText({ })
       m.combat_notification_text(NULL)
 
-      design <- uploaded_design
+      design <- uploaded_design()
+
+      # modifications as in package function read_files
+      design[is.na(design)] <- ""
+      design <- design[, !apply(design, 2, function(x) all(grepl("^\\s*$", x)))]
+      design <- as.data.frame(apply(design, 2, function(x) gsub("[^A-Za-z0-9]", ".", trimws(x))))
+
       max_choices_batches <<- ncol(design) -1
       max_choices_conds <<- nrow(design)
       # update information how many colors and symbols need to be set
@@ -800,6 +807,28 @@ server <- function(input, output, session) {
       })
       output$condition_symbols_manually_note <- renderText({
         paste("There need to be ", max_choices_conds, " symbols set.")
+      })
+
+      # possible references - same as in package
+      possible_refs <- c()
+      for (i in 1:nrow(design)){
+        counter <- 0  # counts how many columns have a value for this row
+        for(j in 1:ncol(design)){
+          if(trimws(design[i,j]) != ""){
+            counter <- counter + 1
+          }
+        }
+        if(counter == ncol(design)){
+          possible_refs <- append(possible_refs, trimws(design[i,1]))
+        }
+      }
+      possible_refs <- unique(possible_refs)  # safety
+      possible_refs <- trimws(possible_refs)  # safety
+      possible_refs <- paste(possible_refs, collapse = ", ")  # convert to a String
+
+      # note stating the possible refs
+      output$possible_refs_note <- renderText({
+        paste("Possible references are: ", possible_refs)
       })
 
       # when new/another design uploaded, reset selected value for center as default 1
