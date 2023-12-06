@@ -809,7 +809,7 @@ server <- function(input, output, session) {
         paste("There need to be ", max_choices_conds, " symbols set.")
       })
 
-      # possible references - same as in package
+      # possible references for newly uploaded design - same as in package
       possible_refs <- c()
       for (i in 1:nrow(design)){
         counter <- 0  # counts how many columns have a value for this row
@@ -826,7 +826,7 @@ server <- function(input, output, session) {
       possible_refs <- trimws(possible_refs)  # safety
       possible_refs <- paste(possible_refs, collapse = ", ")  # convert to a String
 
-      # note stating the possible refs
+      # update note stating the possible refs
       output$possible_refs_note <- renderText({
         paste("Possible references are: ", possible_refs)
       })
