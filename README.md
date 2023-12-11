@@ -1,4 +1,4 @@
-# rowwisenorm_shiny
+# omics_norm_shiny
 R Shiny Application for Omics Data Normalization 
 
 **Description:**
