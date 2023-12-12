@@ -36,3 +36,8 @@ The application is divided into three tabs.
 1. First, there is a tab that includes the upload of data and the settings. In this place, the data can be processed, and the normalization can be performed. 
 2. Following this, there is a tab allowing the user to have a preview of the normalized values, download the normalized data, and download plots of the raw data as well as plots of the normalized data. 
 3. The third tab can be used to directly view the plots inside the shiny app. This symbolizes an easy way to determine whether the normalization helped reduce batch effects in comparison with the raw data.
+
+**Acknowledgement:**
+
+The included normalization method M-ComBat is implemented using the code of Caleb K. Stein.
+The code is accessed via the GitHub repository https://github.com/SteinCK/M-ComBat
