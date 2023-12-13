@@ -22,7 +22,7 @@ library(lumi)  # for VSN
 library(preprocessCore)  # for Quantile normalization
 library(sva)  # for ComBat
 
-library(shinyjs)
+library(shinyjs)  # to handle command line parameter
 
 # setting upload size to 100 MB max
 options(shiny.maxRequestSize=100*1024^2)
@@ -428,6 +428,8 @@ ui <- fluidPage(
                           textOutput("reading_error"),  # handle stop() call inside reading
                           textOutput("reading_warning"),  # handle warning() inside reading
                           textOutput("normalize_row_warning"),  # not valid reference entered
+                          textOutput("datafile_error"),
+                          textOutput("designfile_error"),
 
                           # notifications for PCA colors, symbols, and M-ComBat center
                           textOutput("batch_colors_manually_notification"),
@@ -736,19 +738,28 @@ server <- function(input, output, session) {
       plot_of_symbols()
     })
 
+
     # important: called to previously get completely raw data frame (without any feature filtering done)
     uploaded_data <- function(){
+      output$datafile_error <- renderText({ NULL })  # clear
       req(input$data)
       inFile <- input$data
-      ext <- tools::file_ext(inFile$name)
-      if (ext == "csv") {
-        df <- read.csv(inFile$datapath, header = TRUE, stringsAsFactors = FALSE)
-      } else {
-        df <- read.table(inFile$datapath, header = TRUE, sep = "\t", stringsAsFactors = FALSE)
-      }
-      # important: same as in rowwisenorm package, replace all non-letter and non-number with a dot (safety)
-      colnames(df) <- gsub("[^A-Za-z0-9]", ".", colnames(df))  # - otherwise column names do not match
-      return(df)
+      tryCatch({
+        ext <- tools::file_ext(inFile$name)
+        if (ext == "csv") {
+          df <- read.csv(inFile$datapath, header = TRUE, stringsAsFactors = FALSE)
+        } else {
+          df <- read.table(inFile$datapath, header = TRUE, sep = "\t", stringsAsFactors = FALSE)
+        }
+        # important: same as in rowwisenorm package, replace all non-letter and non-number with a dot (safety)
+        colnames(df) <- gsub("[^A-Za-z0-9]", ".", colnames(df))  # - otherwise column names do not match
+        return(df)
+      }, error = function(e) {
+        output$datafile_error <- renderText({
+          paste("Error reading file of data:", e$message)
+        })
+        return(data.frame())  # return empty data frame
+      })
     }
 
     # called to previously read in uploaded experimental design
@@ -831,8 +842,10 @@ server <- function(input, output, session) {
         paste("Possible references are: ", possible_refs)
       })
 
-      # when new/another design uploaded, reset selected value for center as default 1
-      updateNumericInput(session, "m.combat_center", value = 1)
+      # when new/another design uploaded:
+      updateTextInput(session, "refs", value = "")  # reset input for manually set references
+      updateNumericInput(session, "m.combat_center", value = 1)  # reset selected value for center as default 1
+
     })
 
     # when button to search for features is clicked
@@ -847,14 +860,15 @@ server <- function(input, output, session) {
       available_features_data <- character(0)
       df <- uploaded_data()  # currently uploaded data
 
-      for (feat in features) {
-        regex_pattern <- gsub("\\s+", ".*", feat)
-        matching_col <- grep(regex_pattern, colnames(df), value = TRUE, ignore.case = TRUE, perl = TRUE)
-        if (length(matching_col) == 1) {  # if exactly one column matches
-          available_features_data <- append(available_features_data, feat)  # add the feature as a choice
+      if (nrow(df) > 0 || ncol(df) > 0) {  # only when uploaded data not empty
+        for (feat in features) {
+          regex_pattern <- gsub("\\s+", ".*", feat)
+          matching_col <- grep(regex_pattern, colnames(df), value = TRUE, ignore.case = TRUE, perl = TRUE)
+          if (length(matching_col) == 1) {  # if exactly one column matches
+            available_features_data <- append(available_features_data, feat)  # add the feature as a choice
+          }
         }
       }
-
       # Update the available features using the reactiveVal
       available_features(available_features_data)
 
@@ -1109,8 +1123,10 @@ server <- function(input, output, session) {
 
             # completely raw data with all columns  (no ID column, no feature filtering, raw is never needed but for plot comparison)
             lowest_level_df_raw <<- uploaded_data()
-            # reduce to lowest level
-            lowest_level_df_raw <<- lowest_level_df_raw[colnames(lowest_level_df_raw) %in% colnames(lowest_level_df)]
+            # reduce to lowest level - only when uploaded data not empty
+            if (nrow(df) > 0 || ncol(df) > 0) {
+              lowest_level_df_raw <<- lowest_level_df_raw[colnames(lowest_level_df_raw) %in% colnames(lowest_level_df)]
+            }
 
             # pre-processing (included in each normalization) and normalization
             if(input$method == "row-wise-normalization"){
@@ -1457,7 +1473,7 @@ server <- function(input, output, session) {
       },
       content = function(file) {
         # only do when data was processed (data frame not empty)
-        if (nrow(lowest_level_df) != 0){
+        if (nrow(lowest_level_df_raw) != 0){
           # show labels parameter
           if (input$show_labels) show_lab <- T else show_lab <- F
 
@@ -1521,7 +1537,7 @@ server <- function(input, output, session) {
       },
       content = function(file) {
         # only do when data was processed (data frame not empty)
-        if (nrow(lowest_level_df) != 0){
+        if (nrow(lowest_level_df_pre) != 0){
           # show labels parameter
           if (input$show_labels) show_lab <- T else show_lab <- F
 
