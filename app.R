@@ -42,6 +42,9 @@ ui <- fluidPage(
     tags$head(tags$style("#reading_warning{color: orange; margin-bottom: 20px;")),
     tags$head(tags$style("#reading_error{color: red; margin-bottom: 20px;}")),
     tags$head(tags$style("#normalize_row_warning{color: red; margin-bottom: 20px;}")),
+    tags$head(tags$style("#datafile_error{color: red; margin-bottom: 20px;}")),
+    tags$head(tags$style("#designfile_error{color: red; margin-bottom: 20px;}")),
+
     # colors & line spacing of notifications of colors, symbols, M-ComBat center
     tags$head(tags$style("#batch_colors_manually_notification{color: darkblue; margin-bottom: 20px;}")),
     tags$head(tags$style("#condition_symbols_manually_notification{color: darkblue; margin-bottom: 20px;}")),
@@ -790,6 +793,9 @@ server <- function(input, output, session) {
       output$batch_colors_manually_notification <- renderText({ })
       output$condition_symbols_manually_notification <- renderText({ })
       m.combat_notification_text(NULL)
+      output$datafile_error <- renderText({ NULL })
+      output$reading_error <- renderText({ NULL })
+
     })
 
     # new design uploaded:
@@ -860,15 +866,14 @@ server <- function(input, output, session) {
       available_features_data <- character(0)
       df <- uploaded_data()  # currently uploaded data
 
-      if (nrow(df) > 0 || ncol(df) > 0) {  # only when uploaded data not empty
-        for (feat in features) {
-          regex_pattern <- gsub("\\s+", ".*", feat)
-          matching_col <- grep(regex_pattern, colnames(df), value = TRUE, ignore.case = TRUE, perl = TRUE)
-          if (length(matching_col) == 1) {  # if exactly one column matches
-            available_features_data <- append(available_features_data, feat)  # add the feature as a choice
-          }
+      for (feat in features) {
+        regex_pattern <- gsub("\\s+", ".*", feat)
+        matching_col <- grep(regex_pattern, colnames(df), value = TRUE, ignore.case = TRUE, perl = TRUE)
+        if (length(matching_col) == 1) {  # if exactly one column matches
+          available_features_data <- append(available_features_data, feat)  # add the feature as a choice
         }
       }
+
       # Update the available features using the reactiveVal
       available_features(available_features_data)
 
@@ -1123,10 +1128,9 @@ server <- function(input, output, session) {
 
             # completely raw data with all columns  (no ID column, no feature filtering, raw is never needed but for plot comparison)
             lowest_level_df_raw <<- uploaded_data()
-            # reduce to lowest level - only when uploaded data not empty
-            if (nrow(df) > 0 || ncol(df) > 0) {
-              lowest_level_df_raw <<- lowest_level_df_raw[colnames(lowest_level_df_raw) %in% colnames(lowest_level_df)]
-            }
+            # reduce to lowest level
+            lowest_level_df_raw <<- lowest_level_df_raw[colnames(lowest_level_df_raw) %in% colnames(lowest_level_df)]
+
 
             # pre-processing (included in each normalization) and normalization
             if(input$method == "row-wise-normalization"){
