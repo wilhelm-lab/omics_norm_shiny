@@ -759,7 +759,7 @@ server <- function(input, output, session) {
         return(df)
       }, error = function(e) {
         output$datafile_error <- renderText({
-          paste("Error reading file of data:", e$message)
+          paste("Error reading the file of the data:", e$message)
         })
         return(data.frame())  # return empty data frame
       })
@@ -768,11 +768,19 @@ server <- function(input, output, session) {
     # called to previously read in uploaded experimental design
     uploaded_design <- function(){
       req(input$exp_design)
-      design <- read.table(input$exp_design$datapath, header = FALSE, sep = "\t", na.strings = "NaN")
-      design[is.na(design)] <- ""
-      design <- design[, !apply(design, 2, function(x) all(grepl("^\\s*$", x)))]
-      design <- as.data.frame(apply(design, 2, function(x) gsub("[^A-Za-z0-9]", ".", trimws(x))))
-      return(design)
+      tryCatch({
+        design <- read.table(input$exp_design$datapath, header = FALSE, sep = "\t", na.strings = "NaN")
+        design[is.na(design)] <- ""
+        design <- design[, !apply(design, 2, function(x) all(grepl("^\\s*$", x)))]
+        design <- as.data.frame(apply(design, 2, function(x) gsub("[^A-Za-z0-9]", ".", trimws(x))))
+        return(design)
+      }, error = function(e) {
+        output$designfile_error <- renderText({
+          paste("Error reading the file of the experimental design:", e$message)
+        })
+        return(data.frame())  # return empty data frame
+      })
+
     }
 
     # Reactive value to store available features
@@ -808,6 +816,11 @@ server <- function(input, output, session) {
       output$batch_colors_manually_notification <- renderText({ })
       output$condition_symbols_manually_notification <- renderText({ })
       m.combat_notification_text(NULL)
+      output$designfile_error <- renderText({ NULL })
+      output$reading_error <- renderText({ NULL })
+      # clear notes about number of colors/symbols to be set
+      output$batch_colors_manually_note <- renderText({ NULL })
+      output$condition_symbols_manually_note <- renderText({ NULL })
 
       design <- uploaded_design()
 
@@ -818,25 +831,32 @@ server <- function(input, output, session) {
 
       max_choices_batches <<- ncol(design) -1
       max_choices_conds <<- nrow(design)
-      # update information how many colors and symbols need to be set
-      output$batch_colors_manually_note <- renderText({
-        paste("There need to be ", max_choices_batches, " colors set.")
-      })
-      output$condition_symbols_manually_note <- renderText({
-        paste("There need to be ", max_choices_conds, " symbols set.")
-      })
+
+      # update information how many colors and symbols need to be set - only when > 0 (no error in design)
+      if (max_choices_batches > 0){
+        output$batch_colors_manually_note <- renderText({
+          paste("There need to be ", max_choices_batches, " colors set.")
+        })
+      }
+      if (max_choices_conds > 0) {
+        output$condition_symbols_manually_note <- renderText({
+          paste("There need to be ", max_choices_conds, " symbols set.")
+        })
+      }
 
       # possible references for newly uploaded design - same as in package
       possible_refs <- c()
-      for (i in 1:nrow(design)){
-        counter <- 0  # counts how many columns have a value for this row
-        for(j in 1:ncol(design)){
-          if(trimws(design[i,j]) != ""){
-            counter <- counter + 1
+      if(nrow(design) > 0 && ncol(design) > 0){  # - only when design not empty
+        for (i in 1:nrow(design)){
+          counter <- 0  # counts how many columns have a value for this row
+          for(j in 1:ncol(design)){
+            if(trimws(design[i,j]) != ""){
+              counter <- counter + 1
+            }
           }
-        }
-        if(counter == ncol(design)){
-          possible_refs <- append(possible_refs, trimws(design[i,1]))
+          if(counter == ncol(design)){
+            possible_refs <- append(possible_refs, trimws(design[i,1]))
+          }
         }
       }
       possible_refs <- unique(possible_refs)  # safety
@@ -943,13 +963,23 @@ server <- function(input, output, session) {
       max_choices_conds <<- nrow(design)
 
       # whenever more colors/symbols are set than allowed, directly reduce the selected ones
-      if (length(input$batch_colors_manually) > max_choices_batches){
+      if (max_choices_batches < 1){  # - e.g. error in design file
+        updateSelectInput(session, "batch_colors_manually", selected = "")
+      }
+      else if (length(input$batch_colors_manually) > max_choices_batches){
         updateSelectInput(session, "batch_colors_manually", selected = input$batch_colors_manually[1:max_choices_batches])
       }
-      if (length(input$condition_symbols_manually) > max_choices_conds){
+      if (max_choices_conds < 1){  # - e.g. error in design file, make selection empty
+        updateSelectInput(session, "condition_symbols_manually", selected = "")
+      }
+      else if (length(input$condition_symbols_manually) > max_choices_conds){
         updateSelectInput(session, "condition_symbols_manually", selected = input$condition_symbols_manually[1:max_choices_conds])
       }
+      if (max_choices_batches < 1){
+        max_choices_batches <<- 1  # otherwise: empty design leads to max = -1, causes endless loop in next observe block
+      }
       updateNumericInput(session, "m.combat_center", max = max_choices_batches)
+
     })
 
     # M-ComBat center: when manually a number is entered, modify to be at most max and at least 1
